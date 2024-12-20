@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Nombre de caractères avant le curseur</title>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
+    <link rel="stylesheet" href="GUI.css">
 </head>
 <body onload="brython()">
     <div class="toolbar-container">
@@ -17,46 +18,138 @@
     </div>
     <h2>Nombre de caractères avant le curseur</h2>
     <div class="editor-container">
-        <textarea class="editor" id="editor" rows="20" cols="100">Ligne 1
-        Ligne 2
-        Ligne 3
-        Ligne 4
-        </textarea>
+        <textarea class="editor" id="editor" rows="20" cols="100"></textarea> <!-- Zone de texte vide pour afficher les ciphers -->
     </div>
     <div id="output"></div>
     <p id="cursorPosition">Caractères avant le curseur: 0</p>
 
     <script type="text/python">
         from browser import document, bind, window
-        liste = []
 
-        def get_cursor_position(event):
-            textarea = document["editor"]
-            # Nombre de caractères avant le curseur
-            cursor_pos = textarea.selectionStart
-            document["cursorPosition"].text = f"Caractères avant le curseur: {cursor_pos}"
+        # Définition des classes Link et ChainedList
+        class Link:
+            def __init__(self, next=None, prev=None, author='', cipher='', date='', lvl='', iv='', id=0):
+                self.author = author
+                self.cipher = cipher
+                self.date = date
+                self.lvl = lvl
+                self.iv = iv
+                self.next = next
+                self.prev = prev
+                self.id = id
+                self.plain = ''
+                self.key = ''
+                self.style = ''
 
+            def decrypt(self, algo):
+                key = 'key_placeholder'  # A adapter avec votre méthode de génération de clé
+                txt = algo(self.cipher, key, self.iv)
+                self.plain = txt[14:]
+                self.style = txt[:14]
+
+            def encrypt(self, algo):
+                key = 'key_placeholder'
+                txt = self.style + self.plain
+                self.cipher = algo(txt, key, self.iv)
+
+            def setKey(self, key):
+                self.key = key
+
+            def __str__(self):
+                return f"{self.author} {self.cipher} {self.date} {self.lvl} {self.iv} {self.id}"
+
+        class ChainedList:
+            def __init__(self):
+                self.head = None
+                self.tail = None
+                self.size = 0
+                self.acceldict = {}
+
+            def add(self, author, cipher, date, lvl, iv, id, prev=None):
+                new_link = Link(author=author, cipher=cipher, date=date, lvl=lvl, iv=iv, id=id)
+                if prev:
+                    new_link.prev = prev
+                    new_link.next = prev.next
+                    prev.next = new_link
+                    if new_link.next:
+                        new_link.next.prev = new_link
+                else:
+                    new_link.next = self.head
+                    if self.head:
+                        self.head.prev = new_link
+                    self.head = new_link
+                    if not self.tail:
+                        self.tail = new_link
+                self.size += 1
+                self.acceldict[id] = new_link
+
+            def __str__(self):
+                res = ''
+                current = self.head
+                while current:
+                    res += str(current) + ' '
+                    current = current.next
+                return res
+
+            def __getitem__(self, key):
+                return self.acceldict[key]
+
+        # Instancier une liste chaînée
+        message_list = ChainedList()
+        message_list.add(author="", cipher="1", date="", lvl="", iv="", id="")
+        message_list.add(author="", cipher="\n", date="", lvl="", iv="", id="")
+        message_list.add(author="", cipher="3", date="", lvl="", iv="", id="")
+        print(message_list)
+        
+
+        # Fonction pour mettre à jour le contenu du textarea
+        def update_textarea():
+            # Récupérer tous les ciphers de la liste chaînée
+            ciphers = []
+            current = message_list.head
+            while current:
+                # Convertir chaque cipher en chaîne de caractères
+                ciphers.append(str(current.cipher))  # Convertir en string
+                current = current.next
+            # Mettre à jour le contenu du textarea
+            document["editor"].value = ''.join(ciphers)
+
+        update_textarea()
         @bind("#editor", "keydown")
         def capture_last_key(event):
             # Récupérer la dernière touche pressée
             last_key = event.key
 
-            # Récupérer la position actuelle du curseur
-            selection = window.getSelection()
-            cursor_position = selection.getRangeAt(0).startOffset if selection.rangeCount > 0 else 0
-            
-            # Afficher la dernière touche pressée et la position du curseur dans la console
-            print(f"Dernière touche pressée: {last_key}")
-            liste.append(last_key)
-            print(f"Position du curseur: {cursor_position}")
-            print(liste)
+            # Ajouter l'entrée à la liste chaînée
+            message_list.add(
+                author="", cipher=last_key, date="", lvl="", iv="", id=""
+            )
 
-            # Afficher dans l'élément output
-            document["output"].text = f"Dernière touche pressée: {last_key}" 
+            # Afficher la dernière touche et la position du curseur dans la console
+            print(f"Dernière touche pressée: {last_key}")
+            print(f"Liste actuelle: {message_list}")
+
+            # Afficher la position dans l'élément output
+            document["output"].text = f"Dernière touche pressée: {last_key}"
 
         # Attacher l'événement de mouvement de la souris et de saisie au champ de texte
+        def get_cursor_position(event):
+            textarea = document["editor"]
+            cursor_pos = textarea.selectionStart
+            document["cursorPosition"].text = f"Caractères avant le curseur: {cursor_pos}"
+
         document["editor"].bind("click", get_cursor_position)
         document["editor"].bind("keyup", get_cursor_position)
+
     </script>
 </body>
 </html>
+
+<!-- 
+TRUC A FAIRE :
+- rajouter le traitement des touche speciale (Exemple : Backspace supprime un caractere)
+- faire acceldico
+- interface pour le choix de la clé + adaptation dans les metadonnée des maillon
+- MAYBE interface niveau de lecture ecriture, 
+
+-->

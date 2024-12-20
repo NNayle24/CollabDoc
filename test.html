@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Nombre de caractères avant le curseur</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
+</head>
+<body onload="brython()">
+    <div class="toolbar-container">
+        <div class="toolbar">
+            <button id="boldBtn" onclick="execCmd('bold', 'boldBtn')">Gras</button>
+            <button id="italicBtn" onclick="execCmd('italic', 'italicBtn')">Italique</button>
+            <button id="underlineBtn" onclick="execCmd('underline', 'underlineBtn')">Souligner</button>
+            <input type="number" value="16" id="fontSizeInput" placeholder="Taille (px)" />
+            <button onclick="applyFontSize()">Appliquer la taille</button>
+        </div>
+    </div>
+    <h2>Nombre de caractères avant le curseur</h2>
+    <div class="editor-container">
+        <textarea class="editor" id="editor" rows="20" cols="100">Ligne 1
+        Ligne 2
+        Ligne 3
+        Ligne 4
+        </textarea>
+    </div>
+    <div id="output"></div>
+    <p id="cursorPosition">Caractères avant le curseur: 0</p>
+
+    <script type="text/python">
+        from browser import document, bind, window
+        liste = []
+
+        def get_cursor_position(event):
+            textarea = document["editor"]
+            # Nombre de caractères avant le curseur
+            cursor_pos = textarea.selectionStart
+            document["cursorPosition"].text = f"Caractères avant le curseur: {cursor_pos}"
+
+        @bind("#editor", "keydown")
+        def capture_last_key(event):
+            # Récupérer la dernière touche pressée
+            last_key = event.key
+
+            # Récupérer la position actuelle du curseur
+            selection = window.getSelection()
+            cursor_position = selection.getRangeAt(0).startOffset if selection.rangeCount > 0 else 0
+            
+            # Afficher la dernière touche pressée et la position du curseur dans la console
+            print(f"Dernière touche pressée: {last_key}")
+            liste.append(last_key)
+            print(f"Position du curseur: {cursor_position}")
+            print(liste)
+
+            # Afficher dans l'élément output
+            document["output"].text = f"Dernière touche pressée: {last_key}" 
+
+        # Attacher l'événement de mouvement de la souris et de saisie au champ de texte
+        document["editor"].bind("click", get_cursor_position)
+        document["editor"].bind("keyup", get_cursor_position)
+    </script>
+</body>
+</html>

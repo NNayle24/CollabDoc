@@ -1,0 +1,122 @@
+@startuml
+
+class Lettre {
+    - contenu: String
+    - niveauSecurite: int
+    + getContenu(): String
+    + getNiveauSecurite(): int
+}
+
+class Client {
+    - lettres: LinkedList<Lettre>
+    + demanderUpdateGlobal(): void
+    + seConnecter(): void
+    + faireModification(lettre: Lettre): void
+    + chiffrerDonnees(lettre: Lettre, algorithme: StrategieChiffrement): Lettre
+    + dechiffrerDonnees(lettre: Lettre, algorithme: StrategieChiffrement): Lettre
+    + formaterEnvoi(lettre: Lettre): String
+    + reformaterReception(data: String): Lettre
+}
+
+class Serveur {
+    - donnees: StructureDonnees
+    + envoyerModificationAcceptee(): void
+    + validerConnexion(): void
+    + envoyerModification(): void
+    + formaterEnvoi(lettre: Lettre): String
+    + reformaterReception(data: String): Lettre
+}
+
+class StructureDonnees {
+    + ajouter(lettre: Lettre): void
+    + supprimer(lettre: Lettre): void
+    + chercher(contenu: String): Lettre
+}
+
+class Liste extends StructureDonnees {
+    + ajouter(lettre: Lettre): void
+    + supprimer(lettre: Lettre): void
+    + chercher(contenu: String): Lettre
+}
+
+class ListeChainee extends StructureDonnees {
+    + ajouter(lettre: Lettre): void
+    + supprimer(lettre: Lettre): void
+    + chercher(contenu: String): Lettre
+}
+
+class HMap extends StructureDonnees {
+    + ajouter(lettre: Lettre): void
+    + supprimer(lettre: Lettre): void
+    + chercher(contenu: String): Lettre
+}
+
+class DBSQL extends StructureDonnees {
+    + ajouter(lettre: Lettre): void
+    + supprimer(lettre: Lettre): void
+    + chercher(contenu: String): Lettre
+}
+
+Serveur --> StructureDonnees
+StructureDonnees <|-- Liste
+StructureDonnees <|-- ListeChainee
+StructureDonnees <|-- HMap
+StructureDonnees <|-- DBSQL
+
+class Processus {
+    + traiter(): void
+}
+
+class ProcessusModification extends Processus {
+    + traiter(): void
+}
+
+class ProcessusConnexion extends Processus {
+    + traiter(): void
+}
+
+class ProcessusUpdate extends Processus {
+    + traiter(): void
+}
+
+Serveur --> ProcessusModification : "dédié à modification"
+Serveur --> ProcessusConnexion : "dédié à connexion"
+Serveur --> ProcessusUpdate : "dédié à update global"
+
+class Strategie {
+    + appliquerSecurite(lettre: Lettre): void
+}
+
+class StrategieHauteSecurite extends Strategie {
+    + appliquerSecurite(lettre: Lettre): void
+}
+
+class StrategieBasseSecurite extends Strategie {
+    + appliquerSecurite(lettre: Lettre): void
+}
+
+class StrategieChiffrement {
+    + chiffrer(lettre: Lettre): Lettre
+    + dechiffrer(lettre: Lettre): Lettre
+}
+
+class ChiffrementAES extends StrategieChiffrement {
+    + chiffrer(lettre: Lettre): Lettre
+    + dechiffrer(lettre: Lettre): Lettre
+}
+
+class ChiffrementRSA extends StrategieChiffrement {
+    + chiffrer(lettre: Lettre): Lettre
+    + dechiffrer(lettre: Lettre): Lettre
+}
+
+Client --> "0..*" Lettre : gère
+Serveur --> "0..*" Lettre : contient
+Client --|> Strategie : utilise
+Serveur --|> Strategie : utilise
+Strategie <|-- StrategieHauteSecurite
+Strategie <|-- StrategieBasseSecurite
+StrategieChiffrement <|-- ChiffrementAES
+StrategieChiffrement <|-- ChiffrementRSA
+
+@enduml

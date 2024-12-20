@@ -29,7 +29,6 @@ Ce projet vise à concevoir et développer une application Java permettant à de
 - Yann L
 
 ## Diagramme UML
-_Un espace sera réservé ici pour intégrer le diagramme UML décrivant l'architecture et les interactions principales du projet._
 
 ![Diagramme UML](/uml.png)
 

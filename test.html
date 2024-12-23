@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Nombre de caractères avant le curseur</title>
+    <title>GUI</title>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
     <link rel="stylesheet" href="GUI.css">
 </head>
@@ -16,7 +16,7 @@
             <button onclick="applyFontSize()">Appliquer la taille</button>
         </div>
     </div>
-    <h2>Nombre de caractères avant le curseur</h2>
+    <h2>Wish Document Partage</h2>
     <div class="editor-container">
         <textarea class="editor" id="editor" rows="20" cols="100"></textarea> <!-- Zone de texte vide pour afficher les ciphers -->
     </div>
@@ -68,69 +68,121 @@
             def add(self, author, cipher, date, lvl, iv, id, prev=None):
                 new_link = Link(author=author, cipher=cipher, date=date, lvl=lvl, iv=iv, id=id)
                 if prev:
+                    # Si un élément précédent est spécifié, insérer après cet élément
                     new_link.prev = prev
                     new_link.next = prev.next
                     prev.next = new_link
                     if new_link.next:
                         new_link.next.prev = new_link
                 else:
-                    new_link.next = self.head
-                    if self.head:
-                        self.head.prev = new_link
-                    self.head = new_link
-                    if not self.tail:
+                    # Ajouter à la queue par défaut
+                    if self.tail:  # Si la liste n'est pas vide
+                        new_link.prev = self.tail
+                        self.tail.next = new_link
                         self.tail = new_link
+                    else:  # Si la liste est vide
+                        self.head = self.tail = new_link
                 self.size += 1
                 self.acceldict[id] = new_link
+            
+            
+            def remove(self, id):
+                current = self.acceldict[id]
+                if current.prev:
+                    current.prev.next = current.next
+                else:
+                    self.head = current.next
+                if current.next:
+                    current.next.prev = current.prev
+                else:
+                    self.tail = current.prev
+                self.size -= 1
+                del self.acceldict[id]
 
             def __str__(self):
                 res = ''
-                current = self.head
+                current = self.head  # Commencez à partir de la queue
                 while current:
-                    res += str(current) + ' '
-                    current = current.next
+                    # Affiche explicitement \n comme texte
+                    res += current.cipher.replace("\n", "\\n") + ' '
+                    current = current.next  # Remontez vers l'élément précédent
                 return res
-
-            def __getitem__(self, key):
-                return self.acceldict[key]
+            
+            def __getitem__(self, id):
+                return self.acceldict[id]
 
         # Instancier une liste chaînée
         message_list = ChainedList()
-        message_list.add(author="", cipher="1", date="", lvl="", iv="", id="")
-        message_list.add(author="", cipher="\n", date="", lvl="", iv="", id="")
-        message_list.add(author="", cipher="3", date="", lvl="", iv="", id="")
+        message_list.add(author="", cipher="1", date="", lvl="", iv="", id=message_list.size+1)
+        message_list.add(author="", cipher="2", date="", lvl="", iv="", id=message_list.size+1)
+        message_list.add(author="", cipher="3", date="", lvl="", iv="", id=message_list.size+1)
+        message_list.add(author="", cipher="4", date="", lvl="", iv="", id=message_list.size+1)
         print(message_list)
-        
+        print(message_list.head)
 
-        # Fonction pour mettre à jour le contenu du textarea
         def update_textarea():
-            # Récupérer tous les ciphers de la liste chaînée
             ciphers = []
             current = message_list.head
             while current:
-                # Convertir chaque cipher en chaîne de caractères
                 ciphers.append(str(current.cipher))  # Convertir en string
                 current = current.next
-            # Mettre à jour le contenu du textarea
             document["editor"].value = ''.join(ciphers)
 
         update_textarea()
+        
+        def get_id_cursor():
+            # Récupérer la position du curseur
+            textarea = document["editor"]
+            cursor_pos = textarea.selectionStart  # Position actuelle du curseur
+            
+            if cursor_pos == 0:
+                return None  # Pas de caractère avant le curseur
+        
+            # Parcourir la liste chaînée en comptant les nœuds
+            current = message_list.head
+            index = 0
+        
+            while current:
+                if index == cursor_pos - 1:
+                    return current.id
+                
+                current = current.next
+                index += 1
+        
+            return None  # Aucun ID trouvé  
+    
+        allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" "àâäéèêëîïôöùûüç" "{}[]&$/\=+_-'\".,;!?@#^%*() ")
+
         @bind("#editor", "keydown")
         def capture_last_key(event):
-            # Récupérer la dernière touche pressée
-            last_key = event.key
+            if event.key == "Enter":
+                message_list.add(author="", cipher="\n", date="", lvl="", iv="", id=message_list.size+1)
+                print(message_list)
+            if event.key == "Backspace":
+                id=get_id_cursor()
+                if id in message_list.acceldict:
+                    message_list.remove(id)
+                    print(message_list)
+                else :
+                    print("bru")
+            if event.key == "Delete":
+                id=get_id_cursor()
+                if id in message_list.acceldict:
+                    message_list.remove(message_list[id].next.id)
+                    print(message_list)
+            if event.key in allowed_chars:
+                # Récupérer la dernière touche pressée
+                last_key = event.key
 
-            # Ajouter l'entrée à la liste chaînée
-            message_list.add(
-                author="", cipher=last_key, date="", lvl="", iv="", id=""
-            )
+                # Ajouter l'entrée à la liste chaînée
+                message_list.add(author="", cipher=last_key, date="", lvl="", iv="", id=message_list.size+1)
 
-            # Afficher la dernière touche et la position du curseur dans la console
-            print(f"Dernière touche pressée: {last_key}")
-            print(f"Liste actuelle: {message_list}")
+                # Afficher la dernière touche et la position du curseur dans la console
+                print(f"Dernière touche pressée: {last_key}")
+                print(f"Liste actuelle: {message_list}")
 
-            # Afficher la position dans l'élément output
-            document["output"].text = f"Dernière touche pressée: {last_key}"
+                # Afficher la position dans l'élément output
+                document["output"].text = f"Dernière touche pressée: {last_key}"
 
         # Attacher l'événement de mouvement de la souris et de saisie au champ de texte
         def get_cursor_position(event):
@@ -146,6 +198,7 @@
 </html>
 
 <!-- 
+
 TRUC A FAIRE :
 - rajouter le traitement des touche speciale (Exemple : Backspace supprime un caractere)
 - faire acceldico

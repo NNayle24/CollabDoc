@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.11.0/brython.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.11.0/brython_stdlib.min.js"></script>
+</head>
+
+<body onload="brython()">
+    <h2>Client Web - Connexion au Serveur</h2>
+    <div>
+        <label for="username">Nom d'utilisateur :</label>
+        <input type="text" id="username" placeholder="Entrez votre nom d'utilisateur" />
+        <button id="connect-btn">Se connecter</button>
+    </div>
+    <div>
+        <label for="input-area">Tapez ici :</label>
+        <input type="text" id="input-area" placeholder="Tapez votre texte" disabled />
+    </div>
+    <pre id="server-messages"></pre>
+
+    <script type="text/python">
+        from browser import document, window
+    
+        # Variables globales
+        ws = None  # WebSocket
+        server_url = "ws://172.20.164.24:8080/ws"  # Adresse du serveur WebSocket
+    
+        def on_message(event):
+            """Gestion des messages reçus du serveur."""
+            server_messages = document["server-messages"]
+            server_messages.textContent += f"\n{event.data}"
+    
+        def on_open(event):
+            """Action lorsque la connexion WebSocket est établie."""
+            print("Connexion établie au serveur WebSocket")
+            document["input-area"].disabled = False
+            document["server-messages"].textContent = "Connexion réussie au serveur !"
+    
+            # Envoyer le nom d'utilisateur après ouverture
+            username = document["username"].value
+            ws.send(f"LOGIN:{username}")
+    
+        def on_close(event):
+            """Action lorsque la connexion WebSocket est fermée."""
+            print("Connexion WebSocket fermée.")
+    
+        def on_error(event):
+            """Action en cas d'erreur."""
+            print("Erreur WebSocket : ", event)
+    
+        def connect_server(event):
+            """Connexion au serveur WebSocket."""
+            global ws
+            username = document["username"].value
+            if not username:
+                window.alert("Veuillez entrer un nom d'utilisateur.")
+                return
+    
+            # Initialisation de la connexion WebSocket
+            ws = window.WebSocket.new(server_url)
+            ws.bind("message", on_message)
+            ws.bind("open", on_open)
+            ws.bind("close", on_close)
+            ws.bind("error", on_error)
+    
+        def send_character(event):
+            """Envoyer chaque caractère tapé au serveur."""
+            global ws
+            if ws and ws.readyState == window.WebSocket.OPEN and len(event.key) == 1:
+                ws.send(f"UPDATE:{event.key}")
+            if event.key == "Enter":  # Déconnexion si l'utilisateur tape "Enter"
+                ws.close()
+    
+        # Lier les événements
+        document["connect-btn"].bind("click", connect_server)
+        document["input-area"].bind("keydown", send_character)
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>GUI</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
+    <link rel="stylesheet" href="test.css">
+</head>
+<body onload="brython()">
+    
+    <h2>Document Partage</h2>
+
+    <div class="sidebar">
+        <label for="dropdown1">Niveau Ecriture :</label>
+        <select id="choice1">
+        </select>
+        <label for="dropdown2">Niveau lecture :</label>
+        <select id="choice2">
+        </select>
+    </div>
+
+    
+    <div class="editor-container">
+        <textarea class="editor" id="editor" rows="20" cols="100"></textarea> 
+    </div>
+    <div id="output"></div>
+    <p id="cursorPosition">Caractères avant le curseur: 0</p>
+
+    <script type="text/python">
+        from browser import document, bind, window
+
+        # Définition des classes Link et ChainedList
+        class Link:
+            def __init__(self, next=None, prev=None, author='', cipher='', date='', lec='', ecr='', iv='', id=0):
+                self.author = author
+                self.cipher = cipher
+                self.date = date
+                self.lec = lec
+                self.ecr = ecr
+                self.iv = iv
+                self.next = next
+                self.prev = prev
+                self.id = id
+                self.plain = ''
+                self.key = ''
+                self.style = ''
+
+            def decrypt(self, algo):
+                key = 'key_placeholder'  # A adapter avec votre méthode de génération de clé
+                txt = algo(self.cipher, key, self.iv)
+                self.plain = txt[14:]
+                self.style = txt[:14]
+
+            def encrypt(self, algo):
+                key = 'key_placeholder'
+                txt = self.style + self.plain
+                self.cipher = algo(txt, key, self.iv)
+
+            def setKey(self, key):
+                self.key = key
+
+            def __str__(self):
+                return f"{self.author} {self.cipher} {self.date} {self.lec} {self.ecr} {self.iv} {self.id}"
+
+        class ChainedList:
+            def __init__(self):
+                self.head = None
+                self.tail = None
+                self.size = 0
+                self.acceldict = {}
+                self.acceldict[None] = None
+                self.current_id = 0
+
+
+            def add(self, author, cipher, date, lec, ecr, iv, id, prev=None):
+                self.current_id += 1
+                new_link = Link(author=author, cipher=cipher, date=date, lec=lec, ecr=ecr, iv=iv, id=self.current_id)
+                if prev:
+                    # Si un élément précédent est spécifié, insérer après cet élément
+                    new_link.prev = prev
+                    new_link.next = prev.next
+                    prev.next = new_link
+                    if new_link.next:
+                        new_link.next.prev = new_link
+                else:
+                    # Ajouter à la queue par défaut
+                    if self.head:  # Si la liste n'est pas vide
+                        new_link.next = self.head
+                        self.head.prev = new_link   
+                        self.head = new_link
+                    else:  # Si la liste est vide
+                        self.head = self.tail = new_link
+                self.size += 1
+                self.acceldict[self.current_id] = new_link
+            
+            
+            def remove(self, id):
+                current = self.acceldict[id]
+                if current.prev:
+                    current.prev.next = current.next
+                else:
+                    self.head = current.next
+                if current.next:
+                    current.next.prev = current.prev
+                else:
+                    self.tail = current.prev
+                self.size -= 1
+                del self.acceldict[id]
+
+            def __str__(self):
+                res = ''
+                current = self.head  # Commencez à partir de la queue
+                while current:
+                    # Affiche explicitement \n comme texte
+                    res += current.cipher.replace("\n", "\\n") + ' '
+                    current = current.next  # Remontez vers l'élément précédent
+                return res
+            
+            def __getitem__(self, id):
+                return self.acceldict[id]
+
+        # Instancier une liste chaînée
+        message_list = ChainedList()
+        message_list.add(author="", cipher="1", date="", lec="4", ecr="4", iv="", id=message_list.size+1)
+        message_list.add(author="", cipher="2", date="", lec="1", ecr="1", iv="", id=message_list.size+1, prev = message_list.acceldict[1])
+        message_list.add(author="", cipher="3", date="", lec="5", ecr="5", iv="", id=message_list.size+1, prev = message_list.acceldict[2])
+        message_list.add(author="", cipher="4", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[3])
+        message_list.add(author="", cipher="5", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[4])
+        message_list.add(author="", cipher="6", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[5])
+
+
+        print(message_list)
+        print(message_list.head)
+
+        UserLec = 3
+        UserEcr = 3
+        allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" "àâäéèêëîïôöùûüç" "{}[]&$/\=+_-'\".,;!?@#^%*() ")
+
+
+        def update_textarea():
+            ciphers = []
+            current = message_list.head
+            while current:
+                if int(current.lec) > UserLec:
+                    ciphers.append("Ø")
+                else:
+                    ciphers.append(str(current.cipher))
+                current = current.next
+            document["editor"].value = ''  # Efface tout d'abord
+            document["editor"].value = ''.join(ciphers)  # Puis ajoute le contenu mis à jour
+
+
+            
+        def get_choice1():
+            choice1 = document["choice1"].value
+            return(choice1)
+        
+        def get_choice2():
+            choice2 = document["choice2"].value
+            return(choice2)
+
+        def populate_dropdowns():
+            options1 = ["1", "2", "3", "4", "5"]
+            options2 = ["1", "2", "3", "4", "5"]
+
+            # Ajouter les options au premier dropdown
+            for opt in options1:
+                option = document.createElement("option")
+                option.text = opt
+                option.value = opt.lower().replace(" ", "")
+                document["choice1"] <= option
+
+            # Ajouter les options au deuxième dropdown
+            for opt in options2:
+                option = document.createElement("option")
+                option.text = opt
+                option.value = opt.lower().replace(" ", "")
+                document["choice2"] <= option
+
+        # Appeler la fonction pour peupler les dropdowns
+        populate_dropdowns()
+
+        def get_id_cursor():
+            # Récupérer la position du curseur
+            textarea = document["editor"]
+            cursor_pos = textarea.selectionStart  # Position actuelle du curseur
+            
+            if cursor_pos == 0:
+                return None  # Pas de caractère avant le curseur
+        
+            # Parcourir la liste chaînée en comptant les nœuds
+            current = message_list.head
+            index = 0
+        
+            while current:
+                if index == cursor_pos - 1:
+                    return current.id
+                
+                current = current.next
+                index += 1
+        
+            return None  # Aucun ID trouvé  
+
+        
+        def delete_char_at_position(position):
+            textarea = document["editor"]
+            text = textarea.value
+            # Vérifier si la position est valide
+            if 0 <= position < len(text):  # Vérifie si la position est dans les limites du texte
+                # Supprimer le caractère à la position spécifiée
+                new_text = text[:position] + text[position + 1:]
+                
+                # Mettre à jour le contenu du textarea
+                textarea.value = new_text
+                
+                # Déplacer le curseur à la position spécifiée
+                textarea.selectionStart = position
+                textarea.selectionEnd = position  # Assurer que le curseur est à la bonne position
+                print(f"Text after deletion: {textarea.value}")
+                print(f"New cursor position: {position}")
+            else:
+                print(f"Position invalide. Texte actuel : {text} (Longueur : {len(text)})")
+        
+        
+            
+        
+
+        def delete_links_in_range(start, end):
+            ids_to_remove = []
+            positions_to_remove = []  # Liste des positions des caractères à supprimer
+            current = message_list.head
+            index = 0  # Indice courant pour suivre la position dans le texte
+               
+            # Parcourir la liste pour collecter les IDs des éléments à supprimer
+            while current:
+                if start < 1 and end > 0:
+                    ids_to_remove.append(current.id)
+                    positions_to_remove.append(index)  # Ajouter la position actuelle
+                start -= 1
+                end -= 1
+                index += 1
+                current = current.next
+            
+            print(f"IDs to remove: {ids_to_remove}")
+            print(f"Positions to remove: {positions_to_remove}")
+                
+            # Récupérer le textarea
+            textarea = document["editor"]
+                
+            # Traiter chaque ID et position
+            for id, position in zip(ids_to_remove[::-1], positions_to_remove[::-1]):
+
+                print(f"Processing ID: {id} at position: {position}")
+                    
+                # Vérification des permissions avant de supprimer
+                if id in message_list.acceldict:
+                    if int(message_list.acceldict[id].ecr) > UserEcr:
+                        print(f"Vous n'avez pas les permissions pour supprimer l'élément avec ID: {id}")
+                        continue  # Si pas de permission, on passe à l'élément suivant
+                        
+                    print(f"Suppression autorisée pour l'élément avec ID: {id}")
+                        
+                    # Appeler une fonction pour supprimer le caractère à cette position
+                    delete_char_at_position(position)
+                        
+                    # Supprimer l'élément de la liste
+                    message_list.remove(id)
+                    print(f"ID {id} removed from message_list")
+                else:
+                    print(f"ID {id} not found in acceldict.")
+            
+            
+        
+        
+        
+        
+
+
+        @bind("#editor", "keydown")
+        def capture_last_key(event):
+            
+            if event.key == "Enter":
+                id=get_id_cursor()
+                message_list.add(author="", cipher="\n", date="", lec=get_choice2(), ecr=get_choice1(), iv="",prev=message_list.acceldict[id], id=message_list.size+1)
+                print(message_list)
+
+            if event.key == "Backspace":
+                selection = document["editor"].selectionStart, document["editor"].selectionEnd
+            
+                if selection[0] != selection[1]:  # Suppression d'une sélection
+                    event.preventDefault()
+                    delete_links_in_range(selection[0], selection[1])
+                    
+                else:
+                    id = get_id_cursor()
+                    if selection[0] == 0:  # Début du texte
+                        print("Impossible de supprimer avant la première position.")
+                    elif id in message_list.acceldict:
+                        if int(message_list.acceldict[id].ecr) > UserEcr:
+                            print("Vous n'avez pas les permissions pour supprimer cet élément.")
+                            event.preventDefault()
+                        else:
+                            message_list.remove(id)
+                    else:
+                        print("Identifiant invalide pour Backspace.")
+                print(message_list)
+                
+            
+            if event.key == "Delete":
+                selection = document["editor"].selectionStart, document["editor"].selectionEnd
+            
+                id = get_id_cursor()
+
+                if selection[0] >= len(document["editor"].value):  # Fin du texte
+                    print("Impossible de supprimer après la dernière position.")
+                elif id is None:
+                    if message_list.head:
+                        id_to_remove = message_list.head.id
+                        if int(message_list.acceldict[id_to_remove].ecr) > UserEcr:
+                            print("Vous n'avez pas les permissions pour supprimer cet élément.")
+                            event.preventDefault()
+                        else:
+                            message_list.remove(id_to_remove)
+                    else:
+                        print("La liste est vide, rien à supprimer.")
+                elif id in message_list.acceldict:
+                    if int(message_list.acceldict[id].next.ecr) > UserEcr:
+                        print("Vous n'avez pas les permissions pour supprimer cet élément.")
+                        event.preventDefault()
+                    else:
+                        if hasattr(message_list.acceldict[id], 'next') and message_list.acceldict[id].next:
+                            message_list.remove(message_list.acceldict[id].next.id)
+                        else:
+                            print("Aucun élément à supprimer après.")
+                else:
+                    print("Identifiant invalide pour Delete.")
+                print(message_list)
+
+            if event.key == "w":
+                delete_char_at_position(7)
+
+
+            if event.key in allowed_chars:
+                # Récupérer la dernière touche pressée
+                last_key = event.key
+                id=get_id_cursor()
+                # Ajouter l'entrée à la liste chaînée
+                message_list.add(author="", cipher=last_key, date="", lec=get_choice2(), ecr=get_choice1(), iv="", id=message_list.size+1, prev=message_list.acceldict[id])
+                # Afficher la dernière touche et la position du curseur dans la console
+                print(f"Dernière touche pressée: {last_key}")
+                print(f"Liste actuelle: {message_list}")
+
+                # Afficher la position dans l'élément output
+                document["output"].text = f"Dernière touche pressée: {last_key}"
+
+        # Attacher l'événement de mouvement de la souris et de saisie au champ de texte
+        def get_cursor_position(event):
+            textarea = document["editor"]
+            cursor_pos = textarea.selectionStart
+            document["cursorPosition"].text = f"Caractères avant le curseur: {cursor_pos}"
+        
+        
+        update_textarea()
+        document["editor"].bind("click", get_cursor_position)
+        document["editor"].bind("keyup", get_cursor_position)
+
+        
+    </script>
+</body>
+</html>
+

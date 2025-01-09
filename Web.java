@@ -1,5 +1,3 @@
-
-
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpsConfigurator;
@@ -9,45 +7,56 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
-public class Web {
+public class Web implements Runnable {
     private static String loadFileContent(String filePath) throws IOException {
         return new String(Files.readAllBytes(Paths.get(filePath)));
     }
-    public static void main(String[] args) throws Exception {
-        // Charge le stockage de clés
-        char[] password = "polytech".toCharArray();  // Mot de passe pour le stockage de clés
-        KeyStore ks = KeyStore.getInstance("JKS"); // JKS est un format de stockage de clés
-        ks.load(Files.newInputStream(Paths.get("keystore.jks")), password); // Charge le stockage de clés
 
-        // Set up the key manager factory
-        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509"); // SunX509 est un algorithme de gestion de clés
-        kmf.init(ks, password);
+    @Override
+    public void run() {
+        try {
+            // Charge le stockage de clés
+            char[] password = "polytech".toCharArray();  // Mot de passe pour le stockage de clés
+            KeyStore ks = KeyStore.getInstance("JKS"); // JKS est un format de stockage de clés
+            ks.load(Files.newInputStream(Paths.get("keystore.jks")), password); // Charge le stockage de clés
 
-        // Set up the trust manager factory
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509"); // SunX509 est un algorithme de gestion de clés
-        tmf.init(ks);
+            // Set up the key manager factory
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509"); // SunX509 est un algorithme de gestion de clés
+            kmf.init(ks, password);
 
-        // Set up the SSL context
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new java.security.SecureRandom());
+            // Set up the trust manager factory
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509"); // SunX509 est un algorithme de gestion de clés
+            tmf.init(ks);
 
-        // Create the HTTPS server
-        HttpsServer server = HttpsServer.create(new InetSocketAddress(9999), 0);
-        server.setHttpsConfigurator(new HttpsConfigurator(sslContext));
+            // Set up the SSL context
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new java.security.SecureRandom());
 
-        // Set up the handlers for different pages
-        server.createContext("/", new RootHandler());
-        server.createContext("/page1", new Page1Handler());
-        server.createContext("/page2", new Page2Handler());
+            // Create the HTTPS server
+            HttpsServer server = HttpsServer.create(new InetSocketAddress(9999), 0);
+            server.setHttpsConfigurator(new HttpsConfigurator(sslContext));
 
-        // Start the server
-        server.setExecutor(null);
-        server.start();
+            // Set up the handlers for different pages
+            server.createContext("/", new RootHandler());
+            server.createContext("/page1", new Page1Handler());
+            server.createContext("/page2", new Page2Handler());
+
+            // Start the server
+            server.setExecutor(null);
+            server.start();
+        } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException | UnrecoverableKeyException | KeyManagementException e) {
+            System.err.println("An error occurred: " + e.getMessage());
+        }
     }
 
     static class RootHandler implements HttpHandler {
@@ -82,4 +91,12 @@ public class Web {
             }
         }
     }
+
+    /* 
+    public static void main(String[] args) {
+        Web webServer = new Web();
+        Thread serverThread = new Thread(webServer);
+        serverThread.start();
+    }
+    */
 }

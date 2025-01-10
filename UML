@@ -1,122 +1,100 @@
 @startuml
+interface DataStructure {
+    + void addItem(Item item)
+    + void removeItem(String id)
+    + Item getItem(String id)
+    + Item[] getItems(String[] ids)
+    + Item[] getItems(String first)
+    + String IdGenerator()
+    + String[] getAdded()
+    + String[] getRemoved()
+}
 
-class Lettre {
-    - contenu: String
-    - niveauSecurite: int
-    + getContenu(): String
-    + getNiveauSecurite(): int
+class Web implements Runnable {
+    - static String loadFileContent(String filePath)
+    + void run()
+
+    class RootHandler implements HttpHandler
+    class Page1Handler implements HttpHandler
+    class Page2Handler implements HttpHandler
+}
+
+interface Subscriber {
+    + void update()
+}
+
+class Observer {
+    - List<Subscriber> subscribers = new ArrayList<>()
+    + void addSubscriber(Subscriber subscriber)
+    + void notifySubscribers()
+    + void removeSubscribers()
+}
+
+class PasswordManager {
+    - HashMap<String, String[]> passwords
+    - final String salt
+    - ArrayList<String[]> token
+
+    + PasswordManager(String salt)
+    - String hash(String input)
+    + void loadFileContent(String filePath)
+    + String verify(String username, String password)
+    + boolean checkToken(String token)
+}
+
+final class File extends Observer implements DataStructure {
+    - static final int n = 16
+    - HashMap<String, Item> items
+    - ArrayList<String> added
+    - ArrayList<String> removed
+
+    + void addItem(Item item)
+    + void removeItem(String id)
+    + Item getItem(String id)
+    + Item[] getItems(String[] ids)
+    + Item[] getItems(String first)
+    + String IdGenerator()
+    + String[] getAdded()
+    + String[] getRemoved()
+}
+
+class Item {
+    - String Id
+    - final String Cipher
+    - final String IV
+    - int lvl
+    - String prev
+    - String next
+    - final String date
+    - final String author
+
+    + getters and setters
+}
+
+class WebSocket {}
+
+class Main {
+    + Main()
 }
 
 class Client {
-    - lettres: LinkedList<Lettre>
-    + demanderUpdateGlobal(): void
-    + seConnecter(): void
-    + faireModification(lettre: Lettre): void
-    + chiffrerDonnees(lettre: Lettre, algorithme: StrategieChiffrement): Lettre
-    + dechiffrerDonnees(lettre: Lettre, algorithme: StrategieChiffrement): Lettre
-    + formaterEnvoi(lettre: Lettre): String
-    + reformaterReception(data: String): Lettre
+    - WebsocketClient websocketClient
 }
 
-class Serveur {
-    - donnees: StructureDonnees
-    + envoyerModificationAcceptee(): void
-    + validerConnexion(): void
-    + envoyerModification(): void
-    + formaterEnvoi(lettre: Lettre): String
-    + reformaterReception(data: String): Lettre
+class Sender implements Subscriber {
+    + void update()
 }
 
-class StructureDonnees {
-    + ajouter(lettre: Lettre): void
-    + supprimer(lettre: Lettre): void
-    + chercher(contenu: String): Lettre
-}
+interface HttpHandler {}
 
-class Liste extends StructureDonnees {
-    + ajouter(lettre: Lettre): void
-    + supprimer(lettre: Lettre): void
-    + chercher(contenu: String): Lettre
-}
-
-class ListeChainee extends StructureDonnees {
-    + ajouter(lettre: Lettre): void
-    + supprimer(lettre: Lettre): void
-    + chercher(contenu: String): Lettre
-}
-
-class HMap extends StructureDonnees {
-    + ajouter(lettre: Lettre): void
-    + supprimer(lettre: Lettre): void
-    + chercher(contenu: String): Lettre
-}
-
-class DBSQL extends StructureDonnees {
-    + ajouter(lettre: Lettre): void
-    + supprimer(lettre: Lettre): void
-    + chercher(contenu: String): Lettre
-}
-
-Serveur --> StructureDonnees
-StructureDonnees <|-- Liste
-StructureDonnees <|-- ListeChainee
-StructureDonnees <|-- HMap
-StructureDonnees <|-- DBSQL
-
-class Processus {
-    + traiter(): void
-}
-
-class ProcessusModification extends Processus {
-    + traiter(): void
-}
-
-class ProcessusConnexion extends Processus {
-    + traiter(): void
-}
-
-class ProcessusUpdate extends Processus {
-    + traiter(): void
-}
-
-Serveur --> ProcessusModification : "dédié à modification"
-Serveur --> ProcessusConnexion : "dédié à connexion"
-Serveur --> ProcessusUpdate : "dédié à update global"
-
-class Strategie {
-    + appliquerSecurite(lettre: Lettre): void
-}
-
-class StrategieHauteSecurite extends Strategie {
-    + appliquerSecurite(lettre: Lettre): void
-}
-
-class StrategieBasseSecurite extends Strategie {
-    + appliquerSecurite(lettre: Lettre): void
-}
-
-class StrategieChiffrement {
-    + chiffrer(lettre: Lettre): Lettre
-    + dechiffrer(lettre: Lettre): Lettre
-}
-
-class ChiffrementAES extends StrategieChiffrement {
-    + chiffrer(lettre: Lettre): Lettre
-    + dechiffrer(lettre: Lettre): Lettre
-}
-
-class ChiffrementRSA extends StrategieChiffrement {
-    + chiffrer(lettre: Lettre): Lettre
-    + dechiffrer(lettre: Lettre): Lettre
-}
-
-Client --> "0..*" Lettre : gère
-Serveur --> "0..*" Lettre : contient
-Client --|> Strategie : utilise
-Serveur --|> Strategie : utilise
-Strategie <|-- StrategieHauteSecurite
-Strategie <|-- StrategieBasseSecurite
-StrategieChiffrement <|-- ChiffrementAES
-StrategieChiffrement <|-- ChiffrementRSA
-
+Main --> Web
+Main --> PasswordManager
+Main --> File
+Main --> WebSocket
+Main --> Sender
+Web --> HttpHandler
+File --> Item
+Observer --> Subscriber
+Sender --> Subscriber
+Client --> Web
 @enduml

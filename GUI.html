@@ -7,16 +7,22 @@
     <link rel="stylesheet" href="test.css">
 </head>
 <body onload="brython()">
-    
-    <h2>Document Partage</h2>
+
+    <h2>Doc Partage</h2>
 
     <div class="sidebar">
-        <label for="dropdown1">Niveau Ecriture :</label>
+        Niveau des caractères :
+        <label for="dropdown1">-Niveau Ecriture :</label>
         <select id="choice1">
         </select>
-        <label for="dropdown2">Niveau lecture :</label>
+        <label for="dropdown2">-Niveau lecture :</label>
         <select id="choice2">
         </select>
+        <br>
+        Niveau de l'utilisateur :
+        Ecriture :
+        <br>
+        Lecture :
     </div>
 
     
@@ -27,40 +33,89 @@
     <p id="cursorPosition">Caractères avant le curseur: 0</p>
 
     <script type="text/python">
-        from browser import document, bind, window
+        from browser import document, bind, window, html
+        
+
+
+        is_logged_in = False
+        log_output = html.PRE()
+        document <= log_output
+        input_field = html.INPUT(type="text", placeholder="Entrez votre commande (LOGIN ou CREATE)")
+        document <= input_field
+        document <= html.BUTTON("Envoyer", id="send_button")
+
+        ws = None
+
+        def connect_to_server():
+            global ws,is_logged_in
+            host = "ws://localhost:12345"
+            ws = window.WebSocket.new(host)  # Utiliser `new` ici pour créer l'objet WebSocket
+
+            # Fonction pour gérer les messages du serveur
+            def on_message(evt):
+                msg = evt.data
+                log_output <= f"Message du serveur : {msg}\n"
+                if "LOGIN_SUCCESS" in msg:
+                    is_logged_in = True
+                    log_output <= "Connexion réussie !\n"
+
+            ws.bind("message", on_message)
+
+            def send_message(evt):
+                global ws
+                message = input_field.value
+                if message.startswith("LOGIN"):
+                    ws.send("LOGIN:" + message[6:])
+                elif message.startswith("SEND"):
+                    ws.send("LOGIN:" + message[5:])
+                elif message.startswith("CREATE"):
+                    log_output <= "Création de compte...\n"
+                else:
+                    log_output <= "Commande invalide. Essayez à nouveau.\n"
+                input_field.value = ""
+
+            document["send_button"].bind("click", send_message)
+
+        connect_to_server()
+
+        def generate_random_string(length=16):
+            characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+            
+            random_values = [window.Math.floor(window.Math.random() * 256) for _ in range(length)]
+            
+            random_string = ''.join([characters[val % len(characters)] for val in random_values])
+            return random_string
 
         # Définition des classes Link et ChainedList
         class Link:
-            def __init__(self, next=None, prev=None, author='', cipher='', date='', lec='', ecr='', iv='', id=0):
+            def __init__(self, next=None, prev=None, author='', plain='', cipher='', date='', lec='', ecr='', iv='', id=0):
                 self.author = author
-                self.cipher = cipher
+                self.plain = plain
+                self.cipher = ''
+                print(cipher)
                 self.date = date
                 self.lec = lec
                 self.ecr = ecr
-                self.iv = iv
+                self.iv = generate_random_string()
                 self.next = next
                 self.prev = prev
                 self.id = id
-                self.plain = ''
-                self.key = ''
+                self.key = '123456789azertyu'
                 self.style = ''
+            
 
-            def decrypt(self, algo):
-                key = 'key_placeholder'  # A adapter avec votre méthode de génération de clé
-                txt = algo(self.cipher, key, self.iv)
-                self.plain = txt[14:]
-                self.style = txt[:14]
+            def generate_random_string(self, length=16):
+                characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+                random_values = [window.Math.floor(window.Math.random() * len(characters)) for _ in range(length)]
+                random_string = ''.join([characters[val] for val in random_values])
+                return random_string
 
-            def encrypt(self, algo):
-                key = 'key_placeholder'
-                txt = self.style + self.plain
-                self.cipher = algo(txt, key, self.iv)
 
             def setKey(self, key):
                 self.key = key
 
             def __str__(self):
-                return f"{self.author} {self.cipher} {self.date} {self.lec} {self.ecr} {self.iv} {self.id}"
+                return f"{self.author} {self.plain} {self.date} {self.lec} {self.ecr} {self.iv} {self.id}"
 
         class ChainedList:
             def __init__(self):
@@ -71,10 +126,23 @@
                 self.acceldict[None] = None
                 self.current_id = 0
 
+            def send_link_to_server(self, link):
+                # Vérifiez si `next` et `prev` existent avant d'accéder à leurs `id`
+                next_id = link.next.id if link.next else "None"
+                prev_id = link.prev.id if link.prev else "None"
+            
+                # Créez le message à envoyer au serveur
+                message = (f"Link added: {link.author}, {link.cipher}, {link.date}, {link.lec}, "
+                           f"{link.ecr}, {link.iv}, {next_id}, {prev_id}")
+                
+                # Envoyer ce message au serveur via WebSocket
+                ws.send(message)
+            
 
-            def add(self, author, cipher, date, lec, ecr, iv, id, prev=None):
+            def add(self, author, plain, date, lec, ecr, iv, id, prev=None):
                 self.current_id += 1
-                new_link = Link(author=author, cipher=cipher, date=date, lec=lec, ecr=ecr, iv=iv, id=self.current_id)
+                new_link = Link(author=author, plain=plain, date=window.Date.new().getTime(), lec=lec, ecr=ecr, iv=iv, id=self.current_id)
+                #new_link.cipher = encrypt(Link.AESencrypt)
                 if prev:
                     # Si un élément précédent est spécifié, insérer après cet élément
                     new_link.prev = prev
@@ -92,6 +160,7 @@
                         self.head = self.tail = new_link
                 self.size += 1
                 self.acceldict[self.current_id] = new_link
+                self.send_link_to_server(new_link)
             
             
             def remove(self, id):
@@ -112,42 +181,50 @@
                 current = self.head  # Commencez à partir de la queue
                 while current:
                     # Affiche explicitement \n comme texte
-                    res += current.cipher.replace("\n", "\\n") + ' '
+                    res += current.plain.replace("\n", "\\n") + ' '
                     current = current.next  # Remontez vers l'élément précédent
                 return res
             
             def __getitem__(self, id):
                 return self.acceldict[id]
 
+        def create_list_after_delay():
+            # Cette fonction crée la liste après un délai
+            def delayed_action():
+                
+                message_list.add(author="", plain="1", date="", lec="4", ecr="4", iv="", id=message_list.size+1)
+                message_list.add(author="", plain="2", date="", lec="1", ecr="1", iv="", id=message_list.size+1, prev = message_list.acceldict[1])
+                message_list.add(author="", plain="3", date="", lec="5", ecr="5", iv="", id=message_list.size+1, prev = message_list.acceldict[2])
+                message_list.add(author="", plain="4", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[3])
+                message_list.add(author="", plain="5", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[4])
+                message_list.add(author="", plain="6", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[5])
+                update_textarea()
+
+            window.setTimeout(delayed_action, 1000)  # Délai en millisecondes
+
+        create_list_after_delay()
         # Instancier une liste chaînée
         message_list = ChainedList()
-        message_list.add(author="", cipher="1", date="", lec="4", ecr="4", iv="", id=message_list.size+1)
-        message_list.add(author="", cipher="2", date="", lec="1", ecr="1", iv="", id=message_list.size+1, prev = message_list.acceldict[1])
-        message_list.add(author="", cipher="3", date="", lec="5", ecr="5", iv="", id=message_list.size+1, prev = message_list.acceldict[2])
-        message_list.add(author="", cipher="4", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[3])
-        message_list.add(author="", cipher="5", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[4])
-        message_list.add(author="", cipher="6", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[5])
-
-
+        
         print(message_list)
         print(message_list.head)
 
-        UserLec = 3
+        UserLec = 5
         UserEcr = 3
         allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" "àâäéèêëîïôöùûüç" "{}[]&$/\=+_-'\".,;!?@#^%*() ")
 
 
         def update_textarea():
-            ciphers = []
+            plains = []
             current = message_list.head
             while current:
                 if int(current.lec) > UserLec:
-                    ciphers.append("Ø")
+                    plains.append("Ø")
                 else:
-                    ciphers.append(str(current.cipher))
+                    plains.append(str(current.plain))
                 current = current.next
             document["editor"].value = ''  # Efface tout d'abord
-            document["editor"].value = ''.join(ciphers)  # Puis ajoute le contenu mis à jour
+            document["editor"].value = ''.join(plains)  # Puis ajoute le contenu mis à jour
 
 
             
@@ -281,7 +358,7 @@
             
             if event.key == "Enter":
                 id=get_id_cursor()
-                message_list.add(author="", cipher="\n", date="", lec=get_choice2(), ecr=get_choice1(), iv="",prev=message_list.acceldict[id], id=message_list.size+1)
+                message_list.add(author="", plain="\n", date="", lec=get_choice2(), ecr=get_choice1(), iv="",prev=message_list.acceldict[id], id=message_list.size+1)
                 print(message_list)
 
             if event.key == "Backspace":
@@ -341,17 +418,21 @@
 
 
             if event.key in allowed_chars:
-                # Récupérer la dernière touche pressée
-                last_key = event.key
-                id=get_id_cursor()
-                # Ajouter l'entrée à la liste chaînée
-                message_list.add(author="", cipher=last_key, date="", lec=get_choice2(), ecr=get_choice1(), iv="", id=message_list.size+1, prev=message_list.acceldict[id])
-                # Afficher la dernière touche et la position du curseur dans la console
-                print(f"Dernière touche pressée: {last_key}")
-                print(f"Liste actuelle: {message_list}")
+                if int(UserEcr) >= int(get_choice1()):
+                    # Récupérer la dernière touche pressée
+                    last_key = event.key
+                    id=get_id_cursor()
+                    # Ajouter l'entrée à la liste chaînée
+                    message_list.add(author="", plain=last_key, date="", lec=get_choice2(), ecr=get_choice1(), iv="", id=message_list.size+1, prev=message_list.acceldict[id])
+                    # Afficher la dernière touche et la position du curseur dans la console
+                    print(f"Dernière touche pressée: {last_key}")
+                    print(f"Liste actuelle: {message_list}")
+                    # Afficher la position dans l'élément output
+                    document["output"].text = f"Dernière touche pressée: {last_key}"
+                else :
+                    event.preventDefault()
 
-                # Afficher la position dans l'élément output
-                document["output"].text = f"Dernière touche pressée: {last_key}"
+                
 
         # Attacher l'événement de mouvement de la souris et de saisie au champ de texte
         def get_cursor_position(event):

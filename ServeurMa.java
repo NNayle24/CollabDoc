@@ -1,13 +1,24 @@
+
 import org.java_websocket.server.WebSocketServer;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.security.KeyStore;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.SSLContext;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import com.sun.net.httpserver.HttpsServer;
+import com.sun.net.httpserver.HttpsConfigurator;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
+
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
@@ -15,12 +26,11 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
 
-//javac -cp ".:Java-WebSocket-1.6.0.jar" ServeurMa.java
-//java -cp ".:Java-WebSocket-1.6.0.jar:slf4j-api-2.0.16.jar" ServeurMa
 
 public class ServeurMa {
-    // Liste pour gérer les clients connectés via WebSocket
+    // Liste des clients WebSocket connectés
     private static final List<WebSocket> webSocketClients = new CopyOnWriteArrayList<>();
+
     private static String loadFileContent(String filePath) throws IOException {
         File file = new File(filePath);
         if (!file.exists()) {
@@ -29,12 +39,13 @@ public class ServeurMa {
         return Files.readString(file.toPath());
             
     }
-    public static void main(String[] args) throws Exception {
-        // Lancer le serveur HTTP
-        Thread httpServerThread = new Thread(ServeurMa::startHttpServer);
-        httpServerThread.start();
 
-        // Lancer le serveur WebSocket
+    public static void main(String[] args) throws Exception {
+        // Démarrer le serveur HTTPS dans un thread
+        Thread httpsServerThread = new Thread(ServeurMa::startHttpsServer);
+        httpsServerThread.start();
+
+        // Démarrer le serveur WebSocket
         startWebSocketServer();
     }
 
@@ -86,27 +97,43 @@ public class ServeurMa {
         }
     }
 
-    // Serveur HTTP
-    private static void startHttpServer() {
+    // Lancer le serveur HTTPS
+    private static void startHttpsServer() {
         try {
-            int port = 9999; // Port d'écoute HTTP
-            HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+            char[] password = "polytech".toCharArray();
+            KeyStore ks = KeyStore.getInstance("JKS");
+            ks.load(Files.newInputStream(Paths.get("keystore.jks")), password);
 
-            // Ajouter les routes
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+            kmf.init(ks, password);
+
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+            tmf.init(ks);
+
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+
+            // Création du serveur HTTPS
+            HttpsServer server = HttpsServer.create(new InetSocketAddress(9999), 0);
+            server.setHttpsConfigurator(new HttpsConfigurator(sslContext));
+
+            // Configuration des handlers pour différentes pages
             server.createContext("/", new RootHandler());
 
-            server.setExecutor(null); // Crée un thread par défaut
+            server.setExecutor(null); // Utilise l'exécuteur par défaut
             server.start();
-            System.out.println("Serveur HTTP démarré sur le port " + port);
-        } catch (IOException e) {
+
+            System.out.println("Serveur HTTPS en écoute sur le port 9999...");
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    // Gestion des requêtes HTTP
     static class RootHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            String response = loadFileContent("gui.html");
+            String response = loadFileContent("y.html");
             if (response == null) {
                 String notFoundResponse = "404 - Fichier non trouvé";
                 exchange.sendResponseHeaders(404, notFoundResponse.length());
@@ -115,7 +142,7 @@ public class ServeurMa {
                 }
                 return;
             }
-    
+
             exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
             exchange.sendResponseHeaders(200, response.getBytes().length);
             try (OutputStream os = exchange.getResponseBody()) {
@@ -123,6 +150,7 @@ public class ServeurMa {
             }
         }
     }
+    
 }
 
 

@@ -4,19 +4,6 @@ import org.java_websocket.handshake.ClientHandshake;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.List;
-import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpExchange;
-
-import org.java_websocket.server.WebSocketServer;
-import org.java_websocket.WebSocket;
-import org.java_websocket.handshake.ClientHandshake;
-
-import java.io.IOException;
-import java.io.OutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -104,8 +91,6 @@ public class ServeurMa {
 
             // Ajouter les routes
             server.createContext("/", new RootHandler());
-            server.createContext("/page1", new Page1Handler());
-            server.createContext("/page2", new Page2Handler());
 
             server.setExecutor(null); // Crée un thread par défaut
             server.start();

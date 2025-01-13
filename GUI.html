@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>GUI</title>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
     <link rel="stylesheet" href="test.css">
 </head>
 <body onload="brython()">
@@ -20,9 +22,8 @@
         </select>
         <br>
         Niveau de l'utilisateur :
-        Ecriture :
-        <br>
-        Lecture :
+        <span id="userEcr"></span>
+        <span id="userLec"></span>
     </div>
 
     
@@ -35,14 +36,8 @@
     <script type="text/python">
         from browser import document, bind, window, html
         
-
-
         is_logged_in = False
-        log_output = html.PRE()
-        document <= log_output
-        input_field = html.INPUT(type="text", placeholder="Entrez votre commande (LOGIN ou CREATE)")
-        document <= input_field
-        document <= html.BUTTON("Envoyer", id="send_button")
+        
 
         ws = None
 
@@ -74,8 +69,6 @@
                     log_output <= "Commande invalide. Essayez à nouveau.\n"
                 input_field.value = ""
 
-            document["send_button"].bind("click", send_message)
-
         connect_to_server()
 
         def generate_random_string(length=16):
@@ -90,9 +83,8 @@
         class Link:
             def __init__(self, next=None, prev=None, author='', plain='', cipher='', date='', lec='', ecr='', iv='', id=0):
                 self.author = author
-                self.plain = plain
-                self.cipher = ''
-                print(cipher)
+                self.plain = plain  # Texte à chiffrer
+                self.cipher = ''    # Texte chiffré
                 self.date = date
                 self.lec = lec
                 self.ecr = ecr
@@ -100,10 +92,49 @@
                 self.next = next
                 self.prev = prev
                 self.id = id
-                self.key = '123456789azertyu'
+                self.key = '123456789azertyu'  # Clé par défaut
                 self.style = ''
-            
+                self.encrypt_plain()
 
+
+            def encrypt_plain(self):
+                if not self.plain:
+                    print("Erreur : `plain` est vide.")
+                    return
+                
+                CryptoJS = window.CryptoJS
+            
+                # Convertir la clé et l'IV en format compatible
+                key = CryptoJS.enc.Utf8.parse(self.key)
+                iv = CryptoJS.enc.Utf8.parse(self.iv)
+            
+                # Chiffrement AES
+                encrypted = CryptoJS.AES.encrypt(self.plain, key, {'iv': iv})
+                self.cipher = encrypted.toString()
+            
+                print(f"Chiffrement AES terminé : '{self.cipher}'")
+
+            def decrypt_cipher(self):
+                if not self.cipher:
+                    print("Erreur : `cipher` est vide.")
+                    return
+                
+                CryptoJS = window.CryptoJS
+            
+                # Convertir la clé et l'IV en format compatible
+                key = CryptoJS.enc.Utf8.parse(self.key)
+                iv = CryptoJS.enc.Utf8.parse(self.iv)
+            
+                # Déchiffrement AES
+                decrypted = CryptoJS.AES.decrypt(self.cipher, key, {'iv': iv})
+            
+                # Convertir le résultat du déchiffrement en texte clair
+                decrypted_plain = decrypted.toString(CryptoJS.enc.Utf8)
+            
+                #print(f"Déchiffrement AES terminé : '{decrypted_plain}'")
+                return decrypted_plain
+            
+            
             def generate_random_string(self, length=16):
                 characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
                 random_values = [window.Math.floor(window.Math.random() * len(characters)) for _ in range(length)]
@@ -195,8 +226,8 @@
                 message_list.add(author="", plain="1", date="", lec="4", ecr="4", iv="", id=message_list.size+1)
                 message_list.add(author="", plain="2", date="", lec="1", ecr="1", iv="", id=message_list.size+1, prev = message_list.acceldict[1])
                 message_list.add(author="", plain="3", date="", lec="5", ecr="5", iv="", id=message_list.size+1, prev = message_list.acceldict[2])
-                message_list.add(author="", plain="4", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[3])
-                message_list.add(author="", plain="5", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[4])
+                message_list.add(author="", plain="\n", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[3])
+                message_list.add(author="", plain=" ", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[4])
                 message_list.add(author="", plain="6", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[5])
                 update_textarea()
 
@@ -209,7 +240,7 @@
         print(message_list)
         print(message_list.head)
 
-        UserLec = 5
+        UserLec = 3
         UserEcr = 3
         allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" "àâäéèêëîïôöùûüç" "{}[]&$/\=+_-'\".,;!?@#^%*() ")
 
@@ -225,7 +256,6 @@
                 current = current.next
             document["editor"].value = ''  # Efface tout d'abord
             document["editor"].value = ''.join(plains)  # Puis ajoute le contenu mis à jour
-
 
             
         def get_choice1():
@@ -299,9 +329,6 @@
                 print(f"Position invalide. Texte actuel : {text} (Longueur : {len(text)})")
         
         
-            
-        
-
         def delete_links_in_range(start, end):
             ids_to_remove = []
             positions_to_remove = []  # Liste des positions des caractères à supprimer
@@ -346,12 +373,6 @@
                 else:
                     print(f"ID {id} not found in acceldict.")
             
-            
-        
-        
-        
-        
-
 
         @bind("#editor", "keydown")
         def capture_last_key(event):
@@ -444,9 +465,9 @@
         update_textarea()
         document["editor"].bind("click", get_cursor_position)
         document["editor"].bind("keyup", get_cursor_position)
-
-        
+        document["userEcr"].text = f"Ecriture : {str(UserEcr)}"
+        document["userLec"].text = f"Lecture : {str(UserLec)}"
+         
     </script>
 </body>
 </html>
-

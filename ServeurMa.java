@@ -26,8 +26,6 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
 
- //javac -cp ".:Java-WebSocket-1.6.0.jar" ServeurMa.java
-//java -cp ".:Java-WebSocket-1.6.0.jar:slf4j-api-2.0.16.jar" ServeurMa
 
 public class ServeurMa {
     // Liste des clients WebSocket connectés
@@ -61,7 +59,9 @@ public class ServeurMa {
                     System.out.println("Nouvelle connexion : " + conn.getRemoteSocketAddress());
                     webSocketClients.add(conn);
                     conn.send("Bienvenue sur le serveur WebSocket!");
+                    System.out.println("Connection ouverte avec : " + conn.getRemoteSocketAddress());
                 }
+
 
                 @Override
                 public void onClose(WebSocket conn, int code, String reason, boolean remote) {
@@ -121,6 +121,8 @@ public class ServeurMa {
 
             // Configuration des handlers pour différentes pages
             server.createContext("/", new RootHandler());
+            server.createContext("/GUI.css", new CssHandler());
+
 
             server.setExecutor(null); // Utilise l'exécuteur par défaut
             server.start();
@@ -131,20 +133,21 @@ public class ServeurMa {
         }
     }
 
-    // Gestion des requêtes HTTP
     static class RootHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            String response = loadFileContent("y.html");
+            String response = loadFileContent("GUI.html");
+            
             if (response == null) {
-                String notFoundResponse = "404 - Fichier non trouvé";
+                String notFoundResponse = "404 - Fichier HTML non trouvé";
                 exchange.sendResponseHeaders(404, notFoundResponse.length());
                 try (OutputStream os = exchange.getResponseBody()) {
                     os.write(notFoundResponse.getBytes());
                 }
                 return;
             }
-
+    
+            // Répondre avec le contenu HTML
             exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
             exchange.sendResponseHeaders(200, response.getBytes().length);
             try (OutputStream os = exchange.getResponseBody()) {
@@ -153,6 +156,26 @@ public class ServeurMa {
         }
     }
     
-}
-
-
+    static class CssHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String cssResponse = loadFileContent("GUI.css");
+            
+            if (cssResponse == null) {
+                String notFoundResponse = "404 - Fichier CSS non trouvé";
+                exchange.sendResponseHeaders(404, notFoundResponse.length());
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(notFoundResponse.getBytes());
+                }
+                return;
+            }
+    
+            // Répondre avec le contenu CSS
+            exchange.getResponseHeaders().set("Content-Type", "text/css; charset=UTF-8");
+            exchange.sendResponseHeaders(200, cssResponse.getBytes().length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(cssResponse.getBytes());
+            }
+        }
+    }
+}    

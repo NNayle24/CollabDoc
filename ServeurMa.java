@@ -26,6 +26,8 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
 
+ //javac -cp ".:Java-WebSocket-1.6.0.jar" ServeurMa.java
+//java -cp ".:Java-WebSocket-1.6.0.jar:slf4j-api-2.0.16.jar" ServeurMa
 
 public class ServeurMa {
     // Liste des clients WebSocket connectés

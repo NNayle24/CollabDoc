@@ -7,5 +7,7 @@ public interface DataStructure {
     String IdGenerator();
     String[] getAdded();
     String[] getRemoved();
+    void LoadFileContent(String filename);
+    void SaveFileContent(String filename);
     
 }

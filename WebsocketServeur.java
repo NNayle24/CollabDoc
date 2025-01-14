@@ -9,15 +9,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class WebsocketServeur implements Runnable {
     private static final List<WebSocket> webSocketClients = new CopyOnWriteArrayList<>();
-    private int port;
-    private InetAddress adresse;
+    private final int port;
+    private final InetAddress adresse;
 
     WebsocketServeur(InetAddress ip, int port) {
         this.port = port;
         this.adresse = ip;
     }
+    
+    // Main method to start the WebSocket server
 
     // Serveur WebSocket
+    @Override
     public void run() {
         try {
             // Utilisation des variables d'instance 'adresse' et 'port'
@@ -38,8 +41,11 @@ public class WebsocketServeur implements Runnable {
 
                 @Override
                 public void onMessage(WebSocket conn, String message) {
-                    System.out.println("Message reçu : " + message);
-                    broadcastMessage("Message diffusé : " + message);
+                    if (message.startsWith("LINK:")) {
+                        System.out.println("Le message est un lien : " + message);                     
+                    } else {
+                        System.out.println("Message non traité : " + message);
+                    }
                 }
 
                 @Override
@@ -54,15 +60,22 @@ public class WebsocketServeur implements Runnable {
             };
 
             server.start();
+            System.out.println("Serveur WebSocket accessible a l'url complete : ws://" + adresse.getHostAddress() + ":" + port);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Erreur lors du démarrage du serveur WebSocket : " + e.getMessage());
         }
     }
 
     // Diffuse un message à tous les clients WebSocket connectés
-    public static void broadcastMessage(String message) {
+    public static  void broadcast(String message) {
         for (WebSocket client : webSocketClients) {
             client.send(message);
+        }
+    }
+
+    public static void broadcast(String[] messages) {
+        for (String message : messages) {
+            broadcast(message);
         }
     }
 }

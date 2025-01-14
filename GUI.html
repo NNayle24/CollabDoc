@@ -6,7 +6,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
-    <link rel="stylesheet" href="test.css">
+    <link rel="stylesheet" href="GUI.css">
 </head>
 <body onload="brython()">
 
@@ -43,7 +43,7 @@
 
         def connect_to_server():
             global ws,is_logged_in
-            host = "ws://localhost:12345"
+            host = "ws://127.0.1.1:8080"
             ws = window.WebSocket.new(host)  # Utiliser `new` ici pour créer l'objet WebSocket
 
             # Fonction pour gérer les messages du serveur
@@ -163,7 +163,7 @@
                 prev_id = link.prev.id if link.prev else "None"
             
                 # Créez le message à envoyer au serveur
-                message = (f"Link added: {link.author}, {link.cipher}, {link.date}, {link.lec}, "
+                message = (f"LINK: {link.author}, {link.cipher}, {link.date}, {link.lec}, "
                            f"{link.ecr}, {link.iv}, {next_id}, {prev_id}")
                 
                 # Envoyer ce message au serveur via WebSocket

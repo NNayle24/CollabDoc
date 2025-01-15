@@ -52,6 +52,7 @@ public class WebServeur implements Runnable {
 
             // Créer un gestionnaire de racine
             server.createContext("/", new LoginHandler());
+            server.createContext("/log.css", new logHandler());
             server.createContext("/GUI.css", new CssHandler());
 
             // Démarrer le serveur
@@ -143,7 +144,7 @@ public class WebServeur implements Runnable {
     }
     
 
-    /*static class CssHandler implements HttpHandler {
+    static class CssHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             String cssContent = loadFileContent("log.css");
@@ -155,31 +156,6 @@ public class WebServeur implements Runnable {
                 os.close();
             } else {
                 exchange.sendResponseHeaders(404, -1);
-            }
-        }
-    }*/
-
-
-    static class RootHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            String response = loadFileContent("GUI.html");
-            
-            if (response == null) {
-                System.out.println("404 - Fichier HTML non trouvé");
-                String notFoundResponse = "404 - Fichier HTML non trouvé";
-                exchange.sendResponseHeaders(404, notFoundResponse.length());
-                try (OutputStream os = exchange.getResponseBody()) {
-                    os.write(notFoundResponse.getBytes());
-                }
-                return;
-            }
-            System.out.println("200 - Fichier HTML trouvé");
-            // Répondre avec le contenu HTML
-            exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
-            exchange.sendResponseHeaders(200, response.getBytes().length);
-            try (OutputStream os = exchange.getResponseBody()) {
-                os.write(response.getBytes());
             }
         }
     }

@@ -102,8 +102,8 @@ public class WebServeur implements Runnable {
                     if (info.length == 2) {
                         placeholders.put("lec", info[0]);
                         info = info[1].split(":");
-                        placeholders.put("ecr", info[0]); // Par exemple, extrais le nom de userInfo
-                        placeholders.put("token", info[1]); // Par exemple
+                        placeholders.put("ecr", info[0]); 
+                        placeholders.put("token", info[1]); 
                     }
                     String response = loadFileContent("GUI.html");
                     if (response == null) {

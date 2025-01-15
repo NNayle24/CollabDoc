@@ -134,7 +134,7 @@
                 prev_id = link.prev.id if link.prev else "None"
             
                 # Créez le message à envoyer au serveur
-                message = (f"NEW_MESSAGE: {link.author}, {link.cipher}, {link.date}, {link.lec}, "
+                message = (f"NEW_LINK: {link.author}, {link.cipher}, {link.date}, {link.lec}, "
                            f"{link.ecr}, {link.iv}, {link.id}, {next_id}, {prev_id}")
                 
                 # Envoyer ce message au serveur via WebSocket
@@ -239,9 +239,9 @@
                 elif msg.startswith("LOGIN_FAILED"):
                     is_logged_in = False
                     log_output <= "Échec de la connexion. Veuillez vérifier vos identifiants.\n"
-                elif msg.startswith("NEW_MESSAGE:"):
+                elif msg.startswith("NEW_LINK:"):
                     
-                    parts = msg[len("NEW_MESSAGE:"):].split(", ")
+                    parts = msg[len("NEW_LINK:"):].split(", ")
             
                     # Vérifier si le nombre de parties est correct
                     if len(parts) == 9:
@@ -252,17 +252,30 @@
                             if int(idd) in message_list.acceldict:
                                 print("deja dans le doc")
                             else:
-                                print("poker face")                          
+                                print(prev_id)              
                                 # Appel de la fonction
-                                
-                                message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=None, boolean=True)
-                                #message_list.add(author="", plain="1", date="", lec="4", ecr="4", iv="", id=6) cipher=cipher,
+                                if str(prev_id) == "None" :
+                                    print(prev_id)
+                                    message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=None, boolean=True)
+                                    #message_list.add(author="", plain="1", date="", lec="4", ecr="4", iv="", id=6)
+                                else :
+                                    message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=message_list.acceldict[int(prev_id)], boolean=True)
                                 update_textarea()
                         
-                elif msg.startswith("UPDATE:"):
-                    # Exemple : traiter une mise à jour envoyée par le serveur
-                    update_data = msg.split(":", 1)[1]
-                    log_output <= f"Mise à jour reçue : {update_data}\n"
+                elif msg.startswith("REMOVE_LINK:"):
+                    payload = msg[len("REMOVE_LINK:"):].strip()
+        
+                    # Vérifier si le payload n'est pas vide
+                    if payload:
+                        id = payload.strip()  # Assurez-vous de supprimer les espaces
+                        id=int(id)
+                        if id in message_list.acceldict:
+                                message_list.remove(id)
+                                update_textarea()
+                            
+                    else:
+                        print("Erreur : message après REMOVE_LINK: est vide")
+                    
                 else:
                     log_output <= f"Message inconnu : {msg}\n"
 
@@ -304,8 +317,11 @@
         #print(message_list)
         #print(message_list.head)
 
+        #VAR#
         UserLec = 3
         UserEcr = 3
+        tokendemes2 = 0
+
         allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" "àâäéèêëîïôöùûüç" "{}[]&$/\=+_-'\".,;!?@#^%*() ")
 
         
@@ -422,6 +438,8 @@
                         
                     # Supprimer l'élément de la liste
                     message_list.remove(id)
+                    message = (f"REMOVE_LINK:{id}")
+                    ws.send(message)
                     print(f"ID {id} removed from message_list")
                 else:
                     print(f"ID {id} not found in acceldict.")
@@ -452,6 +470,8 @@
                             event.preventDefault()
                         else:
                             message_list.remove(id)
+                            message = (f"REMOVE_LINK:{id}")
+                            ws.send(message)
                     else:
                         print("Identifiant invalide pour Backspace.")
                 print(message_list)
@@ -462,7 +482,10 @@
             
                 id = get_id_cursor()
 
-                if selection[0] >= len(document["editor"].value):  # Fin du texte
+                if selection[0] != selection[1]:  # Suppression d'une sélection
+                    event.preventDefault()
+                    delete_links_in_range(selection[0], selection[1])
+                elif selection[0] >= len(document["editor"].value):  # Fin du texte
                     print("Impossible de supprimer après la dernière position.")
                 elif id is None:
                     if message_list.head:
@@ -472,6 +495,9 @@
                             event.preventDefault()
                         else:
                             message_list.remove(id_to_remove)
+                            message = (f"REMOVE_LINK:{int(id_to_remove)}")
+                            ws.send(message)
+                            
                     else:
                         print("La liste est vide, rien à supprimer.")
                 elif id in message_list.acceldict:
@@ -480,7 +506,13 @@
                         event.preventDefault()
                     else:
                         if hasattr(message_list.acceldict[id], 'next') and message_list.acceldict[id].next:
-                            message_list.remove(message_list.acceldict[id].next.id)
+                            idd = message_list.acceldict[id].next.id
+                            print(f"Id a supp : {idd}")
+                            message_list.remove(idd)
+
+                            message = (f"REMOVE_LINK:{int(idd)}")
+                            ws.send(message)
+
                         else:
                             print("Aucun élément à supprimer après.")
                 else:
@@ -488,8 +520,8 @@
                 print(message_list)
 
             if event.key == "w":
-                delete_char_at_position(7)
-
+                for id in message_list.acceldict:
+                    print(id)
 
             if event.key in allowed_chars:
                 if int(UserEcr) >= int(get_choice1()):

@@ -31,45 +31,12 @@
         <textarea class="editor" id="editor" rows="20" cols="100"></textarea> 
     </div>
     <div id="output"></div>
+    <pre id="log_output"></pre>
+
     <p id="cursorPosition">Caractères avant le curseur: 0</p>
 
     <script type="text/python">
         from browser import document, bind, window, html
-        
-        is_logged_in = False
-        
-
-        ws = None
-
-        def connect_to_server():
-            global ws,is_logged_in
-            host = "ws://localhost:12345"
-            ws = window.WebSocket.new(host)  # Utiliser `new` ici pour créer l'objet WebSocket
-
-            # Fonction pour gérer les messages du serveur
-            def on_message(evt):
-                msg = evt.data
-                log_output <= f"Message du serveur : {msg}\n"
-                if "LOGIN_SUCCESS" in msg:
-                    is_logged_in = True
-                    log_output <= "Connexion réussie !\n"
-
-            ws.bind("message", on_message)
-
-            def send_message(evt):
-                global ws
-                message = input_field.value
-                if message.startswith("LOGIN"):
-                    ws.send("LOGIN:" + message[6:])
-                elif message.startswith("SEND"):
-                    ws.send("LOGIN:" + message[5:])
-                elif message.startswith("CREATE"):
-                    log_output <= "Création de compte...\n"
-                else:
-                    log_output <= "Commande invalide. Essayez à nouveau.\n"
-                input_field.value = ""
-
-        connect_to_server()
 
         def generate_random_string(length=16):
             characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -82,19 +49,30 @@
         # Définition des classes Link et ChainedList
         class Link:
             def __init__(self, next=None, prev=None, author='', plain='', cipher='', date='', lec='', ecr='', iv='', id=0):
-                self.author = author
+                self.author = 'author'
                 self.plain = plain  # Texte à chiffrer
-                self.cipher = ''    # Texte chiffré
+                self.cipher = cipher    # Texte chiffré
                 self.date = date
                 self.lec = lec
                 self.ecr = ecr
-                self.iv = generate_random_string()
+                self.iv = iv or generate_random_string()
                 self.next = next
                 self.prev = prev
                 self.id = id
                 self.key = '123456789azertyu'  # Clé par défaut
                 self.style = ''
-                self.encrypt_plain()
+
+
+                if cipher == '' and plain != '':
+                    print("crypte")
+                    self.encrypt_plain()
+
+                if cipher != '' and plain == '':
+                    print("decrypte")
+                    self.decrypt_cipher()
+                    print(self.plain)            
+
+                
 
 
             def encrypt_plain(self):
@@ -112,7 +90,7 @@
                 encrypted = CryptoJS.AES.encrypt(self.plain, key, {'iv': iv})
                 self.cipher = encrypted.toString()
             
-                print(f"Chiffrement AES terminé : '{self.cipher}'")
+                #print(f"Chiffrement AES terminé : '{self.cipher}'")
 
             def decrypt_cipher(self):
                 if not self.cipher:
@@ -129,17 +107,10 @@
                 decrypted = CryptoJS.AES.decrypt(self.cipher, key, {'iv': iv})
             
                 # Convertir le résultat du déchiffrement en texte clair
-                decrypted_plain = decrypted.toString(CryptoJS.enc.Utf8)
+                self.plain = decrypted.toString(CryptoJS.enc.Utf8)
             
                 #print(f"Déchiffrement AES terminé : '{decrypted_plain}'")
-                return decrypted_plain
-            
-            
-            def generate_random_string(self, length=16):
-                characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-                random_values = [window.Math.floor(window.Math.random() * len(characters)) for _ in range(length)]
-                random_string = ''.join([characters[val] for val in random_values])
-                return random_string
+                
 
 
             def setKey(self, key):
@@ -163,17 +134,16 @@
                 prev_id = link.prev.id if link.prev else "None"
             
                 # Créez le message à envoyer au serveur
-                message = (f"Link added: {link.author}, {link.cipher}, {link.date}, {link.lec}, "
-                           f"{link.ecr}, {link.iv}, {next_id}, {prev_id}")
+                message = (f"NEW_MESSAGE: {link.author}, {link.cipher}, {link.date}, {link.lec}, "
+                           f"{link.ecr}, {link.iv}, {link.id}, {next_id}, {prev_id}")
                 
                 # Envoyer ce message au serveur via WebSocket
                 ws.send(message)
             
 
-            def add(self, author, plain, date, lec, ecr, iv, id, prev=None):
+            def add(self, author, plain, date, lec, ecr, iv, id, prev=None, cipher=None, boolean=False):
                 self.current_id += 1
-                new_link = Link(author=author, plain=plain, date=window.Date.new().getTime(), lec=lec, ecr=ecr, iv=iv, id=self.current_id)
-                #new_link.cipher = encrypt(Link.AESencrypt)
+                new_link = Link(author=author, plain=plain, cipher=cipher, date=window.Date.new().getTime(), lec=lec, ecr=ecr, iv=iv, id=self.current_id)
                 if prev:
                     # Si un élément précédent est spécifié, insérer après cet élément
                     new_link.prev = prev
@@ -191,7 +161,8 @@
                         self.head = self.tail = new_link
                 self.size += 1
                 self.acceldict[self.current_id] = new_link
-                self.send_link_to_server(new_link)
+                if boolean == False :
+                    self.send_link_to_server(new_link)
             
             
             def remove(self, id):
@@ -219,31 +190,6 @@
             def __getitem__(self, id):
                 return self.acceldict[id]
 
-        def create_list_after_delay():
-            # Cette fonction crée la liste après un délai
-            def delayed_action():
-                
-                message_list.add(author="", plain="1", date="", lec="4", ecr="4", iv="", id=message_list.size+1)
-                message_list.add(author="", plain="2", date="", lec="1", ecr="1", iv="", id=message_list.size+1, prev = message_list.acceldict[1])
-                message_list.add(author="", plain="3", date="", lec="5", ecr="5", iv="", id=message_list.size+1, prev = message_list.acceldict[2])
-                message_list.add(author="", plain="\n", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[3])
-                message_list.add(author="", plain=" ", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[4])
-                message_list.add(author="", plain="6", date="", lec="3", ecr="3", iv="", id=message_list.size+1, prev = message_list.acceldict[5])
-                update_textarea()
-
-            window.setTimeout(delayed_action, 1000)  # Délai en millisecondes
-
-        create_list_after_delay()
-        # Instancier une liste chaînée
-        message_list = ChainedList()
-        
-        print(message_list)
-        print(message_list.head)
-
-        UserLec = 3
-        UserEcr = 3
-        allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" "àâäéèêëîïôöùûüç" "{}[]&$/\=+_-'\".,;!?@#^%*() ")
-
 
         def update_textarea():
             plains = []
@@ -256,6 +202,113 @@
                 current = current.next
             document["editor"].value = ''  # Efface tout d'abord
             document["editor"].value = ''.join(plains)  # Puis ajoute le contenu mis à jour
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+        is_logged_in = False
+        ws = None
+        log_output = document["log_output"]
+
+        def connect_to_server():
+            global ws, is_logged_in, message_list
+            host = "ws://localhost:12345"
+            ws = window.WebSocket.new(host)  # Utiliser `new` ici pour créer l'objet WebSocket
+
+            # Fonction pour gérer les messages du serveur
+            def on_message(evt):
+                msg = evt.data
+                log_output <= f"Message du serveur : {msg}\n"
+                
+                # Traitement des messages basés sur leur contenu
+                if msg.startswith("LOGIN_SUCCESS"):
+                    is_logged_in = True
+                    log_output <= "Connexion réussie !\n"
+                elif msg.startswith("LOGIN_FAILED"):
+                    is_logged_in = False
+                    log_output <= "Échec de la connexion. Veuillez vérifier vos identifiants.\n"
+                elif msg.startswith("NEW_MESSAGE:"):
+                    
+                    parts = msg[len("NEW_MESSAGE:"):].split(", ")
+            
+                    # Vérifier si le nombre de parties est correct
+                    if len(parts) == 9:
+                            
+                            author, cipher, date, lec, ecr, iv, idd, next_id, prev_id = parts
+                            #print(idd)
+                            # Chercher l'id dans la liste des messages
+                            if int(idd) in message_list.acceldict:
+                                print("deja dans le doc")
+                            else:
+                                print("poker face")                          
+                                # Appel de la fonction
+                                
+                                message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=None, boolean=True)
+                                #message_list.add(author="", plain="1", date="", lec="4", ecr="4", iv="", id=6) cipher=cipher,
+                                update_textarea()
+                        
+                elif msg.startswith("UPDATE:"):
+                    # Exemple : traiter une mise à jour envoyée par le serveur
+                    update_data = msg.split(":", 1)[1]
+                    log_output <= f"Mise à jour reçue : {update_data}\n"
+                else:
+                    log_output <= f"Message inconnu : {msg}\n"
+
+            # Lier la fonction on_message à l'événement "message"
+            ws.bind("message", on_message)
+
+        def send_message_to_server():
+            # Vérifier si la connexion WebSocket est active
+            if ws and ws.readyState == 1:  # 1 signifie que la connexion est ouverte
+                mes = "LOGIN:username"
+                ws.send(mes)
+                log_output <= f"Message envoyé au serveur : {mes}\n"
+            else:
+                log_output <= "Erreur : la connexion WebSocket n'est pas ouverte.\n"
+
+        # Connecter au serveur WebSocket
+        message_list = ChainedList()
+        connect_to_server()
+        
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+        
+        # Instancier une liste chaîné        
+        #print(message_list)
+        #print(message_list.head)
+
+        UserLec = 3
+        UserEcr = 3
+        allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" "àâäéèêëîïôöùûüç" "{}[]&$/\=+_-'\".,;!?@#^%*() ")
+
+        
 
             
         def get_choice1():
@@ -379,7 +432,7 @@
             
             if event.key == "Enter":
                 id=get_id_cursor()
-                message_list.add(author="", plain="\n", date="", lec=get_choice2(), ecr=get_choice1(), iv="",prev=message_list.acceldict[id], id=message_list.size+1)
+                message_list.add(author="", plain="\n", cipher="", date="", lec=get_choice2(), ecr=get_choice1(), iv="",prev=message_list.acceldict[id], id=message_list.size+1, boolean=False)
                 print(message_list)
 
             if event.key == "Backspace":
@@ -444,7 +497,7 @@
                     last_key = event.key
                     id=get_id_cursor()
                     # Ajouter l'entrée à la liste chaînée
-                    message_list.add(author="", plain=last_key, date="", lec=get_choice2(), ecr=get_choice1(), iv="", id=message_list.size+1, prev=message_list.acceldict[id])
+                    message_list.add(author="", plain=last_key, cipher="", date="", lec=get_choice2(), ecr=get_choice1(), iv="", id=message_list.size+1, prev=message_list.acceldict[id], boolean=False)
                     # Afficher la dernière touche et la position du curseur dans la console
                     print(f"Dernière touche pressée: {last_key}")
                     print(f"Liste actuelle: {message_list}")
@@ -467,7 +520,7 @@
         document["editor"].bind("keyup", get_cursor_position)
         document["userEcr"].text = f"Ecriture : {str(UserEcr)}"
         document["userLec"].text = f"Lecture : {str(UserLec)}"
-         
+
     </script>
 </body>
 </html>

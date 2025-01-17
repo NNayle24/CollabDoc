@@ -59,7 +59,9 @@
                 self.next = next
                 self.prev = prev
                 self.id = id
-                self.key = '123456789azertyu'  # Clé par défaut
+                self.key = str(self.hash_and_truncate(KEY))
+                print(KEY)
+                print(self.key)
                 self.style = ''
 
 
@@ -70,9 +72,16 @@
                 if cipher != '' and plain == '':
                     print("decrypte")
                     self.decrypt_cipher()
-                    print(self.plain)            
+                    
+            
+            def hash_and_truncate(self,key):
+                hash_result=key
+                CryptoJS = window.CryptoJS
+                for i in range(5 - int(self.lec)):
+                    hash_result = CryptoJS.SHA256(hash_result).toString()
 
                 
+                return hash_result[:16]
 
 
             def encrypt_plain(self):
@@ -134,8 +143,7 @@
                 prev_id = link.prev.id if link.prev else "None"
             
                 # Créez le message à envoyer au serveur
-                message = (f"NEW_LINK: {link.author}, {link.cipher}, {link.date}, {link.lec}, "
-                           f"{link.ecr}, {link.iv}, {link.id}, {next_id}, {prev_id}")
+                message = (f"NEW_LINK:{tokendemes2},{link.author},{link.cipher},{link.date},{link.lec},{link.ecr},{link.iv},{link.id},{next_id},{prev_id}")
                 
                 # Envoyer ce message au serveur via WebSocket
                 ws.send(message)
@@ -241,26 +249,25 @@
                     log_output <= "Échec de la connexion. Veuillez vérifier vos identifiants.\n"
                 elif msg.startswith("NEW_LINK:"):
                     
-                    parts = msg[len("NEW_LINK:"):].split(", ")
+                    parts = msg[len("NEW_LINK:"):].split(",")
             
                     # Vérifier si le nombre de parties est correct
-                    if len(parts) == 9:
                             
-                            author, cipher, date, lec, ecr, iv, idd, next_id, prev_id = parts
-                            #print(idd)
-                            # Chercher l'id dans la liste des messages
-                            if int(idd) in message_list.acceldict:
-                                print("deja dans le doc")
-                            else:
-                                print(prev_id)              
-                                # Appel de la fonction
-                                if str(prev_id) == "None" :
-                                    print(prev_id)
-                                    message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=None, boolean=True)
-                                    #message_list.add(author="", plain="1", date="", lec="4", ecr="4", iv="", id=6)
-                                else :
-                                    message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=message_list.acceldict[int(prev_id)], boolean=True)
-                                update_textarea()
+                    author, cipher, date, lec, ecr, iv, idd, next_id, prev_id = parts
+                    #print(idd)
+                    # Chercher l'id dans la liste des messages
+                    if int(idd) in message_list.acceldict:
+                        print("deja dans le doc")
+                    else:
+                        print(prev_id)              
+                        # Appel de la fonction
+                        if str(prev_id) == "None" :
+                            print(prev_id)
+                            message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=None, boolean=True)
+                            #message_list.add(author="", plain="1", date="", lec="4", ecr="4", iv="", id=6)
+                        else :
+                            message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=message_list.acceldict[int(prev_id)], boolean=True)
+                        update_textarea()
                         
                 elif msg.startswith("REMOVE_LINK:"):
                     payload = msg[len("REMOVE_LINK:"):].strip()
@@ -320,6 +327,7 @@
         #VAR#
         UserLec = #var#lec#var#
         UserEcr = #var#ecr#var#
+        key = '#var#key#var#''
         tokendemes2 = "#var#token#var#"
 
         allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" "àâäéèêëîïôöùûüç" "{}[]&$/\=+_-'\".,;!?@#^%*() ")
@@ -438,7 +446,7 @@
                         
                     # Supprimer l'élément de la liste
                     message_list.remove(id)
-                    message = (f"REMOVE_LINK:{id}")
+                    message = (f"REMOVE_LINK:{tokendemes2},{id}")
                     ws.send(message)
                     print(f"ID {id} removed from message_list")
                 else:
@@ -449,9 +457,12 @@
         def capture_last_key(event):
             
             if event.key == "Enter":
-                id=get_id_cursor()
-                message_list.add(author="", plain="\n", cipher="", date="", lec=get_choice2(), ecr=get_choice1(), iv="",prev=message_list.acceldict[id], id=message_list.size+1, boolean=False)
-                print(message_list)
+                if int(UserEcr) >= int(get_choice1()) and int(UserLec) >= int(get_choice2()):
+                    id=get_id_cursor()
+                    message_list.add(author="", plain="\n", cipher="", date="", lec=get_choice2(), ecr=get_choice1(), iv="",prev=message_list.acceldict[id], id=message_list.size+1, boolean=False)
+                    print(message_list)
+                else :
+                    event.preventDefault()
 
             if event.key == "Backspace":
                 selection = document["editor"].selectionStart, document["editor"].selectionEnd
@@ -470,7 +481,7 @@
                             event.preventDefault()
                         else:
                             message_list.remove(id)
-                            message = (f"REMOVE_LINK:{id}")
+                            message = (f"REMOVE_LINK:{tokendemes2},{id}")
                             ws.send(message)
                     else:
                         print("Identifiant invalide pour Backspace.")
@@ -495,7 +506,7 @@
                             event.preventDefault()
                         else:
                             message_list.remove(id_to_remove)
-                            message = (f"REMOVE_LINK:{int(id_to_remove)}")
+                            message = (f"REMOVE_LINK:{tokendemes2},{int(id_to_remove)}")
                             ws.send(message)
                             
                     else:
@@ -510,7 +521,7 @@
                             print(f"Id a supp : {idd}")
                             message_list.remove(idd)
 
-                            message = (f"REMOVE_LINK:{int(idd)}")
+                            message = (f"REMOVE_LINK:{tokendemes2},{int(idd)}")
                             ws.send(message)
 
                         else:
@@ -524,7 +535,7 @@
                     print(id)
 
             if event.key in allowed_chars:
-                if int(UserEcr) >= int(get_choice1()):
+                if int(UserEcr) >= int(get_choice1()) and int(UserLec) >= int(get_choice2()):
                     # Récupérer la dernière touche pressée
                     last_key = event.key
                     id=get_id_cursor()

@@ -49,7 +49,7 @@
         # Définition des classes Link et ChainedList
         class Link:
             def __init__(self, next=None, prev=None, author='', plain='', cipher='', date='', lec='', ecr='', iv='', id=0):
-                self.author = 'author'
+                self.author = AUTHOR
                 self.plain = plain  # Texte à chiffrer
                 self.cipher = cipher    # Texte chiffré
                 self.date = date
@@ -135,8 +135,8 @@
 
             def send_link_to_server(self, link):
                 # Vérifiez si `next` et `prev` existent avant d'accéder à leurs `id`
-                next_id = link.next.id if link.next else "None"
-                prev_id = link.prev.id if link.prev else "None"
+                next_id = link.next.id if link.next else "last"
+                prev_id = link.prev.id if link.prev else "first"
             
                 # Créez le message à envoyer au serveur
                 message = (f"NEW_LINK:{tokendemes2},{link.author},{link.cipher},{link.date},{link.lec},{link.ecr},{link.iv},{link.id},{next_id},{prev_id}")
@@ -207,8 +207,6 @@
             cursor_pos = document["editor"].selectionStart
             #document["editor"].value = ''  # Efface tout d'abord
             document["editor"].value = ''.join(plains)  # Puis ajoute le contenu mis à jour
-            print(f"Position de la modife : {position}")
-            print(f"Position du curseur : {cursor_pos}")
             if info == 1:  # Ajout
                 if position <= cursor_pos:
                     cursor_pos += 1  # Déplacer le curseur d'une position vers la droite
@@ -266,9 +264,7 @@
                             
                     token,author, cipher, date, lec, ecr, iv, idd, next_id, prev_id = parts
                     # Chercher l'id dans la liste des messages
-                    if int(idd) in message_list.acceldict:
-                        print("deja dans le doc")
-                    else:             
+                    if int(idd) not in message_list.acceldict or idd="first or idd ="last:            
                         # Appel de la fonction
                         if str(prev_id) == "None" :
                             message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=None, boolean=True)
@@ -348,7 +344,7 @@
 
 
 
-        
+
 
 
 
@@ -361,6 +357,7 @@
         #VAR#
         UserLec = #var#lec#var#
         UserEcr = #var#ecr#var#
+        AUTHOR = '#var#author#var#'
         KEY = '#var#key#var#'
         tokendemes2 = "#var#token#var#"
 

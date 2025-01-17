@@ -11,10 +11,12 @@ public class WebsocketServeur implements Runnable {
     private static final List<WebSocket> webSocketClients = new CopyOnWriteArrayList<>();
     private final int port;
     private final InetAddress adresse;
+    private static File file;
 
-    WebsocketServeur(InetAddress ip, int port) {
+    WebsocketServeur(InetAddress ip, int port, File file) {
         this.port = port;
         this.adresse = ip;
+        this.file = file;
     }
     
     // Main method to start the WebSocket server
@@ -24,13 +26,13 @@ public class WebsocketServeur implements Runnable {
     public void run() {
         try {
             // Utilisation des variables d'instance 'adresse' et 'port'
-            WebSocketServer server = new WebSocketServer(new InetSocketAddress(adresse, port)) {
+            WebSocketServer server = new WebSocketServer(new InetSocketAddress(port)) {
                 @Override
                 public void onOpen(WebSocket conn, ClientHandshake handshake) {
                     System.out.println("Nouvelle connexion : " + conn.getRemoteSocketAddress());
                     webSocketClients.add(conn);
-                    conn.send("Bienvenue sur le serveur WebSocket!");
                     System.out.println("Connection ouverte avec : " + conn.getRemoteSocketAddress());
+                    //conn.send(file.getItems["first"]);
                 }
 
                 @Override
@@ -41,8 +43,9 @@ public class WebsocketServeur implements Runnable {
 
                 @Override
                 public void onMessage(WebSocket conn, String message) {
-                    if (message.startsWith("LINK:")) {
-                        System.out.println("Le message est un lien : " + message);                     
+                    if (message.startsWith("NEW_LINK:")) {
+                        System.out.println("Le message est un lien : " + message);   
+                        //file.addItem(message);
                     } else {
                         System.out.println("Message non traité : " + message);
                     }

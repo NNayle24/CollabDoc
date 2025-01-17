@@ -264,11 +264,15 @@
                             
                     token,author, cipher, date, lec, ecr, iv, idd, next_id, prev_id = parts
                     # Chercher l'id dans la liste des messages
-                    if int(idd) not in message_list.acceldict or idd="first or idd ="last:            
+                    print("test")
+                    if int(idd) not in message_list.acceldict or str(idd)=="first" or str(idd) =="last":         
                         # Appel de la fonction
-                        if str(prev_id) == "None" :
+                        if prev_id == "first" :
+
                             message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=None, boolean=True)
+
                         else :
+
                             message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=message_list.acceldict[int(prev_id)], boolean=True)
                         idd=int(idd)
                         current = message_list.head

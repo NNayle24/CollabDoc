@@ -1,0 +1,95 @@
+/* Styles de base */
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #dfe9f3, #ffffff);
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+}
+
+/* Titre principal */
+h1 {
+    text-align: center;
+    color: #4a4a4a;
+    font-size: 32px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Conteneur principal */
+form {
+    background-color: #ffffff;
+    padding: 25px 30px;
+    border-radius: 10px;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Styles des labels */
+form label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #555;
+}
+
+/* Champs de saisie */
+form input[type="text"],
+form input[type="password"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+form input[type="text"]:focus,
+form input[type="password"]:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+
+/* Bouton de soumission */
+form button {
+    background-color: #3498db;
+    color: #ffffff;
+    font-size: 16px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+form button:hover {
+    background-color: #2980b9;
+    transform: scale(1.02);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    form {
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 28px;
+    }
+
+    form input[type="text"],
+    form input[type="password"],
+    form button {
+        font-size: 14px;
+    }
+}

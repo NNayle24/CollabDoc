@@ -100,12 +100,13 @@ public class WebServeur implements Runnable {
                 if (userInfo != "") {
                     Map<String, String> placeholders = new HashMap<>();
                     String [] info = userInfo.split(",");
-                    if (info.length == 2) {
+                    if (info.length == 3) {
                         placeholders.put("lec", info[0]);
-                        info = info[1].split(":");
-                        placeholders.put("ecr", info[0]); 
-                        placeholders.put("ecr", info[1]); 
-                        placeholders.put("token", info[2]);
+                        placeholders.put("ecr", info[1]);
+                        info = info[2].split(":");
+                        placeholders.put("key", info[0]);  
+                        placeholders.put("token", info[1]);
+                    }
                     String response = loadFileContent("GUI.html");
                     if (response == null) {
                         response = "404 - Page de login introuvable";

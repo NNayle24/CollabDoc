@@ -33,7 +33,7 @@ public class WebServeur implements Runnable {
     public void run() {
         try {
             // Créer un serveur HTTPS
-            HttpsServer server = HttpsServer.create(new InetSocketAddress(ip,port), 0);
+            HttpsServer server = HttpsServer.create(new InetSocketAddress(port), 0);
             // Créer un contexte SSL
             SSLContext sslContext = SSLContext.getInstance("TLS");
 
@@ -100,11 +100,13 @@ public class WebServeur implements Runnable {
                 if (userInfo != "") {
                     Map<String, String> placeholders = new HashMap<>();
                     String [] info = userInfo.split(",");
-                    if (info.length == 2) {
+                    if (info.length == 4) {
                         placeholders.put("lec", info[0]);
-                        info = info[1].split(":");
-                        placeholders.put("ecr", info[0]); 
-                        placeholders.put("token", info[1]); 
+                        placeholders.put("ecr", info[1]);
+                        placeholders.put("author", info[2]);
+                        info = info[3].split(":");
+                        placeholders.put("key", info[0]);  
+                        placeholders.put("token", info[1]);
                     }
                     String response = loadFileContent("GUI.html");
                     if (response == null) {
@@ -144,7 +146,7 @@ public class WebServeur implements Runnable {
     }
     
 
-    static class CssHandler implements HttpHandler {
+    static class logHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             String cssContent = loadFileContent("log.css");

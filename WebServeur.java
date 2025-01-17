@@ -103,7 +103,8 @@ public class WebServeur implements Runnable {
                     if (info.length == 3) {
                         placeholders.put("lec", info[0]);
                         placeholders.put("ecr", info[1]);
-                        info = info[2].split(":");
+                        placeholders.put("author", info[2]);
+                        info = info[3].split(":");
                         placeholders.put("key", info[0]);  
                         placeholders.put("token", info[1]);
                     }

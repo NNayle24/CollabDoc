@@ -32,7 +32,6 @@ public class WebsocketServeur implements Runnable {
                     System.out.println("Nouvelle connexion : " + conn.getRemoteSocketAddress());
                     webSocketClients.add(conn);
                     System.out.println("Connection ouverte avec : " + conn.getRemoteSocketAddress());
-                    //conn.send(file.getItems["first"]);
                 }
 
                 @Override

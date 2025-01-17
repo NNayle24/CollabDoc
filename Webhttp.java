@@ -1,63 +1,46 @@
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpsConfigurator;
-import com.sun.net.httpserver.HttpsServer;
-import java.util.Map;
-import java.util.HashMap;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.KeyStore;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
 
-public class WebServeur implements Runnable {
+import java.util.Map;
+import java.util.HashMap;
+import java.io.OutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.InetAddress;
+
+public class Webhttp implements Runnable {
     private InetAddress ip;
     private int port;
     private static PasswordManager PM;
 
     // Constructeur d'instance
-    public WebServeur(InetAddress ip, int port, PasswordManager pm) {
+    public Webhttp(InetAddress ip, int port, PasswordManager pm) {
         this.ip = ip;
         this.port = port;
         this.PM=pm; 
     }
 
-    // Méthode non statique pour démarrer le serveur HTTPS
+    // Méthode non statique pour démarrer le serveur HTTP
     public void run() {
         try {
-            // Créer un serveur HTTPS
-            HttpsServer server = HttpsServer.create(new InetSocketAddress(port), 0);
-            // Créer un contexte SSL
-            SSLContext sslContext = SSLContext.getInstance("TLS");
 
-            // Initialiser le contexte SSL
-            char[] password = "polytech".toCharArray();
-            KeyStore ks = KeyStore.getInstance("JKS");
-            ks.load(Files.newInputStream(Paths.get("keystore.jks")), password);
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-            kmf.init(ks, password);
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-            tmf.init(ks);
-            sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-
-            // Configurer le serveur HTTPS
-            server.setHttpsConfigurator(new HttpsConfigurator(sslContext));
+            // Création du serveur HTTP
+            HttpServer server = HttpServer.create(new InetSocketAddress(ip, port), 0);
 
             // Créer un gestionnaire de racine
             server.createContext("/", new LoginHandler());
             server.createContext("/log.css", new logHandler());
             server.createContext("/GUI.css", new CssHandler());
 
-            // Démarrer le serveur
-            System.out.println("Démarrage du serveur HTTPS pour ce connecter à l'adresse : https://" + ip.getHostAddress() + ":" + port);
+
+            server.setExecutor(null); // Utilise l'exécuteur par défaut
             server.start();
+
+            System.out.println("Serveur HTTP en écoute sur le port 9999...");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -187,3 +170,4 @@ public class WebServeur implements Runnable {
         return htmlContent;
     }
 }
+

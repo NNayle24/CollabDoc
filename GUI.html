@@ -95,8 +95,6 @@
                 encrypted = CryptoJS.AES.encrypt(self.plain, key, {'iv': iv})
                 self.cipher = encrypted.toString()
             
-                #print(f"Chiffrement AES terminé : '{self.cipher}'")
-
             def decrypt_cipher(self):
                 if not self.cipher:
                     print("Erreur : `cipher` est vide.")
@@ -114,8 +112,6 @@
                 # Convertir le résultat du déchiffrement en texte clair
                 self.plain = decrypted.toString(CryptoJS.enc.Utf8)
             
-                #print(f"Déchiffrement AES terminé : '{decrypted_plain}'")
-
             def generate_id(self):
                 id = ""
                 CryptoJS = window.CryptoJS
@@ -288,7 +284,7 @@
 
         def connect_to_server():
             global ws, is_logged_in, message_list
-            host = "ws://127.0.1.1:8080"
+            host = "ws://localhost:8080"
             ws = window.WebSocket.new(host)  # Utiliser `new` ici pour créer l'objet WebSocket
 
             # Fonction pour gérer les messages du serveur
@@ -382,11 +378,7 @@
 
 
 
-        
-        
-        # Instancier une liste chaîné        
-        #print(message_list)
-        #print(message_list.head)
+
 
         #VAR#
         UserLec = #var#lec#var#
@@ -474,11 +466,9 @@
             positions_to_remove = []  # Liste des positions des caractères à supprimer
             current = message_list.head
             index = 0  # Indice courant pour suivre la position dans le texte
-            print("test1")
             # Parcourir la liste pour collecter les IDs des éléments à supprimer
             while current:
                 if current != "last":
-                    print("test2")
                     if start < 1 and end > 0:
                         ids_to_remove.append(current.id)
                         positions_to_remove.append(index)  # Ajouter la position actuelle
@@ -487,12 +477,10 @@
                     index += 1
                     current = current.next
                 else :
-                    print("test3")
                     break
                 
             # Récupérer le textarea
             textarea = document["editor"]
-            print("test4")
             # Traiter chaque ID et position
             for id, position in zip(ids_to_remove[::-1], positions_to_remove[::-1]):
                     
@@ -509,9 +497,7 @@
                     message = (f"REMOVE_LINK:{tokendemes2},{id}")
                     ws.send(message)
                 else:
-                    print(f"ID {id} not found in acceldict.")
-            print("test5")
-            
+                    print(f"ID {id} not found in acceldict.")            
 
         @bind("#editor", "keydown")
         def capture_last_key(event):

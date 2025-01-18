@@ -58,7 +58,7 @@
                 self.iv = iv or generate_random_string()
                 self.next = next
                 self.prev = prev
-                self.id = id
+                self.id = str(id)
                 self.key = str(self.hash_and_truncate(KEY))
                 self.style = ''
 
@@ -115,14 +115,35 @@
                 self.plain = decrypted.toString(CryptoJS.enc.Utf8)
             
                 #print(f"Déchiffrement AES terminé : '{decrypted_plain}'")
-                
 
+            def generate_id(self):
+                id = ""
+                CryptoJS = window.CryptoJS
+                if str(self.prev) != "first":
+                    id += self.prev.id
+                else:
+                    id += "first"
+                
+                if self.next != "last":
+                    id += self.next.id
+                else:
+                    id += "last"
+                hashed_id = CryptoJS.SHA256(id).toString()
+                return hashed_id[:16] 
+            
 
             def setKey(self, key):
                 self.key = key
 
             def __str__(self):
                 return f"{self.author} {self.plain} {self.date} {self.lec} {self.ecr} {self.iv} {self.id}"
+
+            def __eq__(self, other):
+                # Comparaison basée sur un attribut ou un comportement spécifique
+                if isinstance(other, Link):
+                    return self.id == other.id  # ou tout autre attribut pertinent
+                return False  # Par défaut, si `other` n'est pas un `Link`, renvoyer False
+
 
         class ChainedList:
             def __init__(self):
@@ -135,27 +156,35 @@
 
             def send_link_to_server(self, link):
                 # Vérifiez si `next` et `prev` existent avant d'accéder à leurs `id`
-                next_id = link.next.id if link.next else "last"
-                prev_id = link.prev.id if link.prev else "first"
-            
-                # Créez le message à envoyer au serveur
-                message = (f"NEW_LINK:{tokendemes2},{link.author},{link.cipher},{link.date},{link.lec},{link.ecr},{link.iv},{link.id},{next_id},{prev_id}")
+                if isinstance(link.next, str):
+                    next_id = link.next
+                else:
+                    next_id = link.next.id
                 
-                # Envoyer ce message au serveur via WebSocket
+                if isinstance(link.prev, str):
+                    prev_id = link.prev
+                else:
+                    prev_id = link.prev.id
+
+                message = (f"NEW_LINK:{tokendemes2},{link.author},{link.cipher},{link.date},{link.lec},{link.ecr},{link.iv},{link.id},{next_id},{prev_id}")
                 ws.send(message)
             
 
-            def add(self, author, plain, date, lec, ecr, iv, id, prev=None, cipher=None, boolean=False):
+            def add(self, author, plain, date, lec, ecr, iv, id, prev="first", cipher=None, boolean=False):
                 self.current_id += 1
                 new_link = Link(author=author, plain=plain, cipher=cipher, date=window.Date.new().getTime(), lec=lec, ecr=ecr, iv=iv, id=self.current_id)
-                if prev:
+                
+                if isinstance(prev, Link) :
+                    
                     # Si un élément précédent est spécifié, insérer après cet élément
                     new_link.prev = prev
                     new_link.next = prev.next
                     prev.next = new_link
-                    if new_link.next:
+                    if new_link.next != "last":
                         new_link.next.prev = new_link
+                    
                 else:
+                   
                     # Ajouter à la queue par défaut
                     if self.head:  # Si la liste n'est pas vide
                         new_link.next = self.head
@@ -163,19 +192,32 @@
                         self.head = new_link
                     else:  # Si la liste est vide
                         self.head = self.tail = new_link
+                    
                 self.size += 1
-                self.acceldict[self.current_id] = new_link
+
+                
+                if new_link.prev is None:
+                    new_link.prev = "first"
+                if new_link.next is None:
+                    new_link.next = "last"
+                
+                
+                new_link.id = new_link.generate_id()
+                self.acceldict[new_link.id] = new_link
+                
                 if boolean == False :
                     self.send_link_to_server(new_link)
+                
+                
             
             
             def remove(self, id):
                 current = self.acceldict[id]
-                if current.prev:
+                if current.prev != "first":
                     current.prev.next = current.next
                 else:
                     self.head = current.next
-                if current.next:
+                if current.next != "last":
                     current.next.prev = current.prev
                 else:
                     self.tail = current.prev
@@ -184,11 +226,13 @@
 
             def __str__(self):
                 res = ''
-                current = self.head  # Commencez à partir de la queue
-                while current:
+                current = self.head  # Commencez à partir de la tête
+                while current and isinstance(current, Link):  # Assurez-vous que `current` est un objet Link
                     # Affiche explicitement \n comme texte
                     res += current.plain.replace("\n", "\\n") + ' '
-                    current = current.next  # Remontez vers l'élément précédent
+                    current = current.next  # Passez à l'élément suivant
+            
+                # Si `current` devient "last", la boucle s'arrête naturellement
                 return res
             
             def __getitem__(self, id):
@@ -199,11 +243,14 @@
             plains = []
             current = message_list.head
             while current:
-                if int(current.lec) > UserLec:
-                    plains.append("Ø")
-                else:
-                    plains.append(str(current.plain))
-                current = current.next
+                if current != "last" :
+                    if int(current.lec) > UserLec:
+                        plains.append("Ø")
+                    else:
+                        plains.append(str(current.plain))
+                    current = current.next
+                else :
+                    break
             cursor_pos = document["editor"].selectionStart
             #document["editor"].value = ''  # Efface tout d'abord
             document["editor"].value = ''.join(plains)  # Puis ajoute le contenu mis à jour
@@ -241,13 +288,12 @@
 
         def connect_to_server():
             global ws, is_logged_in, message_list
-            host = "ws://127.0.1.1:8080"
+            host = "ws://localhost:8080"
             ws = window.WebSocket.new(host)  # Utiliser `new` ici pour créer l'objet WebSocket
 
             # Fonction pour gérer les messages du serveur
             def on_message(evt):
                 msg = evt.data
-                print(f"Message reçu du serveur : {msg}")
                 log_output <= f"Message du serveur : {msg}\n"
                 
                 # Traitement des messages basés sur leur contenu
@@ -262,31 +308,25 @@
                     parts = msg[len("NEW_LINK:"):].split(",")
             
                     # Vérifier si le nombre de parties est correct
-                            
                     token,author, cipher, date, lec, ecr, iv, idd, next_id, prev_id = parts
                     # Chercher l'id dans la liste des messages
-                    print("test")
-                    if int(idd) not in message_list.acceldict or str(idd)=="first" or str(idd) =="last" or 1==1:         
+                    if str(idd) not in message_list.acceldict or str(idd)=="first" or str(idd) =="last":
                         # Appel de la fonction
                         if prev_id == "first" :
-
-                            message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=None, boolean=True)
+                            message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev="first", boolean=True)
 
                         else :
-
-                            message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=message_list.acceldict[int(prev_id)], boolean=True)
-                        idd=int(idd)
+                            message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=message_list.acceldict[str(prev_id)], boolean=True)
+                        idd=str(idd)
                         current = message_list.head
-                        
                         position = 0
                         variable = 0
                         while current is not None:
-                            if int(current.id) == idd:
+                            if str(current.id) == idd:
                                 variable = position
                                 break 
                             current = current.next
                             position += 1 
-                        
                         update_textarea(variable,1)
                         
                 elif msg.startswith("REMOVE_LINK:"):
@@ -295,17 +335,15 @@
         
                     # Vérifier si le payload n'est pas vide
                     if payload:
-                        idd = payload.strip()  
-                        idd=int(idd)
+                        idd = str(payload.strip())  
+                        idd=str(idd)
                         if idd in message_list.acceldict:
                                                                
                                 current = message_list.head
                                 position = 0
                                 variable = 0
-                                #print(f"id recu :{idd}")
                                 while current is not None:
-                                    #print(f"id tester :{current.id}")
-                                    if int(current.id) == idd:
+                                    if str(current.id) == idd:
                                         variable = position
                                         break
                                     current = current.next
@@ -319,15 +357,6 @@
 
             # Lier la fonction on_message à l'événement "message"
             ws.bind("message", on_message)
-
-        def send_message_to_server():
-            # Vérifier si la connexion WebSocket est active
-            if ws and ws.readyState == 1:  # 1 signifie que la connexion est ouverte
-                mes = "LOGIN:username"
-                ws.send(mes)
-                log_output <= f"Message envoyé au serveur : {mes}\n"
-            else:
-                log_output <= "Erreur : la connexion WebSocket n'est pas ouverte.\n"
 
         # Connecter au serveur WebSocket
         message_list = ChainedList()
@@ -436,8 +465,6 @@
                 # Déplacer le curseur à la position spécifiée
                 textarea.selectionStart = position
                 textarea.selectionEnd = position  # Assurer que le curseur est à la bonne position
-                print(f"Text after deletion: {textarea.value}")
-                print(f"New cursor position: {position}")
             else:
                 print(f"Position invalide. Texte actuel : {text} (Longueur : {len(text)})")
         
@@ -447,36 +474,33 @@
             positions_to_remove = []  # Liste des positions des caractères à supprimer
             current = message_list.head
             index = 0  # Indice courant pour suivre la position dans le texte
-               
+            print("test1")
             # Parcourir la liste pour collecter les IDs des éléments à supprimer
             while current:
-                if start < 1 and end > 0:
-                    ids_to_remove.append(current.id)
-                    positions_to_remove.append(index)  # Ajouter la position actuelle
-                start -= 1
-                end -= 1
-                index += 1
-                current = current.next
-            
-            print(f"IDs to remove: {ids_to_remove}")
-            print(f"Positions to remove: {positions_to_remove}")
+                if current != "last":
+                    print("test2")
+                    if start < 1 and end > 0:
+                        ids_to_remove.append(current.id)
+                        positions_to_remove.append(index)  # Ajouter la position actuelle
+                    start -= 1
+                    end -= 1
+                    index += 1
+                    current = current.next
+                else :
+                    print("test3")
+                    break
                 
             # Récupérer le textarea
             textarea = document["editor"]
-                
+            print("test4")
             # Traiter chaque ID et position
             for id, position in zip(ids_to_remove[::-1], positions_to_remove[::-1]):
-
-                print(f"Processing ID: {id} at position: {position}")
                     
                 # Vérification des permissions avant de supprimer
-                if id in message_list.acceldict:
+                if str(id) in message_list.acceldict:
                     if int(message_list.acceldict[id].ecr) > UserEcr:
-                        print(f"Vous n'avez pas les permissions pour supprimer l'élément avec ID: {id}")
                         continue  # Si pas de permission, on passe à l'élément suivant
-                        
-                    print(f"Suppression autorisée pour l'élément avec ID: {id}")
-                        
+                                                
                     # Appeler une fonction pour supprimer le caractère à cette position
                     delete_char_at_position(position)
                         
@@ -484,9 +508,9 @@
                     message_list.remove(id)
                     message = (f"REMOVE_LINK:{tokendemes2},{id}")
                     ws.send(message)
-                    print(f"ID {id} removed from message_list")
                 else:
                     print(f"ID {id} not found in acceldict.")
+            print("test5")
             
 
         @bind("#editor", "keydown")
@@ -511,7 +535,7 @@
                     id = get_id_cursor()
                     if selection[0] == 0:  # Début du texte
                         print("Impossible de supprimer avant la première position.")
-                    elif id in message_list.acceldict:
+                    elif str(id) in message_list.acceldict:
                         if int(message_list.acceldict[id].ecr) > UserEcr:
                             print("Vous n'avez pas les permissions pour supprimer cet élément.")
                             event.preventDefault()
@@ -542,12 +566,12 @@
                             event.preventDefault()
                         else:
                             message_list.remove(id_to_remove)
-                            message = (f"REMOVE_LINK:{tokendemes2},{int(id_to_remove)}")
+                            message = (f"REMOVE_LINK:{tokendemes2},{str(id_to_remove)}")
                             ws.send(message)
                             
                     else:
                         print("La liste est vide, rien à supprimer.")
-                elif id in message_list.acceldict:
+                elif str(id) in message_list.acceldict:
                     if int(message_list.acceldict[id].next.ecr) > UserEcr:
                         print("Vous n'avez pas les permissions pour supprimer cet élément.")
                         event.preventDefault()
@@ -557,7 +581,7 @@
                             print(f"Id a supp : {idd}")
                             message_list.remove(idd)
 
-                            message = (f"REMOVE_LINK:{tokendemes2},{int(idd)}")
+                            message = (f"REMOVE_LINK:{tokendemes2},{str(idd)}")
                             ws.send(message)
 
                         else:
@@ -566,9 +590,6 @@
                     print("Identifiant invalide pour Delete.")
                 print(message_list)
 
-            if event.key == "w":
-                for id in message_list.acceldict:
-                    print(id)
 
             if event.key in allowed_chars:
                 if int(UserEcr) >= int(get_choice1()) and int(UserLec) >= int(get_choice2()):

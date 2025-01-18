@@ -288,7 +288,7 @@
 
         def connect_to_server():
             global ws, is_logged_in, message_list
-            host = "ws://localhost:8080"
+            host = "ws://127.0.1.1:8080"
             ws = window.WebSocket.new(host)  # Utiliser `new` ici pour créer l'objet WebSocket
 
             # Fonction pour gérer les messages du serveur

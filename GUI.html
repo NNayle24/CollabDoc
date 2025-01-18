@@ -6,7 +6,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
-    <link rel="stylesheet" href="test.css">
+    <link rel="stylesheet" href="GUI.css">
 </head>
 <body onload="brython()">
 
@@ -49,7 +49,7 @@
         # Définition des classes Link et ChainedList
         class Link:
             def __init__(self, next=None, prev=None, author='', plain='', cipher='', date='', lec='', ecr='', iv='', id=0):
-                self.author = 'author'
+                self.author = AUTHOR
                 self.plain = plain  # Texte à chiffrer
                 self.cipher = cipher    # Texte chiffré
                 self.date = date
@@ -60,17 +60,13 @@
                 self.prev = prev
                 self.id = id
                 self.key = str(self.hash_and_truncate(KEY))
-                print(KEY)
-                print(self.key)
                 self.style = ''
 
 
                 if cipher == '' and plain != '':
-                    print("crypte")
                     self.encrypt_plain()
 
                 if cipher != '' and plain == '':
-                    print("decrypte")
                     self.decrypt_cipher()
                     
             
@@ -139,8 +135,8 @@
 
             def send_link_to_server(self, link):
                 # Vérifiez si `next` et `prev` existent avant d'accéder à leurs `id`
-                next_id = link.next.id if link.next else "None"
-                prev_id = link.prev.id if link.prev else "None"
+                next_id = link.next.id if link.next else "last"
+                prev_id = link.prev.id if link.prev else "first"
             
                 # Créez le message à envoyer au serveur
                 message = (f"NEW_LINK:{tokendemes2},{link.author},{link.cipher},{link.date},{link.lec},{link.ecr},{link.iv},{link.id},{next_id},{prev_id}")
@@ -199,7 +195,7 @@
                 return self.acceldict[id]
 
 
-        def update_textarea():
+        def update_textarea(position,info):
             plains = []
             current = message_list.head
             while current:
@@ -208,8 +204,21 @@
                 else:
                     plains.append(str(current.plain))
                 current = current.next
-            document["editor"].value = ''  # Efface tout d'abord
+            cursor_pos = document["editor"].selectionStart
+            #document["editor"].value = ''  # Efface tout d'abord
             document["editor"].value = ''.join(plains)  # Puis ajoute le contenu mis à jour
+            if info == 1:  # Ajout
+                if position <= cursor_pos:
+                    cursor_pos += 1  # Déplacer le curseur d'une position vers la droite
+            elif info == 2:  # Suppression
+                if position < cursor_pos:
+                    cursor_pos -= 1  # Déplacer le curseur d'une position vers la gauche
+            
+            # Repositionner le curseur
+            cursor_pos = max(0, min(cursor_pos, len(document["editor"].value)))  # Limite à l'intérieur du texte
+            document["editor"].setSelectionRange(cursor_pos, cursor_pos)
+        
+
 
 
 
@@ -232,12 +241,13 @@
 
         def connect_to_server():
             global ws, is_logged_in, message_list
-            host = "ws://localhost:12345"
+            host = "ws://127.0.1.1:8080"
             ws = window.WebSocket.new(host)  # Utiliser `new` ici pour créer l'objet WebSocket
 
             # Fonction pour gérer les messages du serveur
             def on_message(evt):
                 msg = evt.data
+                print(f"Message reçu du serveur : {msg}")
                 log_output <= f"Message du serveur : {msg}\n"
                 
                 # Traitement des messages basés sur leur contenu
@@ -253,35 +263,56 @@
             
                     # Vérifier si le nombre de parties est correct
                             
-                    author, cipher, date, lec, ecr, iv, idd, next_id, prev_id = parts
-                    #print(idd)
+                    token,author, cipher, date, lec, ecr, iv, idd, next_id, prev_id = parts
                     # Chercher l'id dans la liste des messages
-                    if int(idd) in message_list.acceldict:
-                        print("deja dans le doc")
-                    else:
-                        print(prev_id)              
+                    print("test")
+                    if int(idd) not in message_list.acceldict or str(idd)=="first" or str(idd) =="last" or 1==1:         
                         # Appel de la fonction
-                        if str(prev_id) == "None" :
-                            print(prev_id)
+                        if prev_id == "first" :
+
                             message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=None, boolean=True)
-                            #message_list.add(author="", plain="1", date="", lec="4", ecr="4", iv="", id=6)
+
                         else :
+
                             message_list.add(author=author,cipher=cipher, plain="", date=date, lec=lec, ecr=ecr, iv=iv, id=idd, prev=message_list.acceldict[int(prev_id)], boolean=True)
-                        update_textarea()
+                        idd=int(idd)
+                        current = message_list.head
+                        
+                        position = 0
+                        variable = 0
+                        while current is not None:
+                            if int(current.id) == idd:
+                                variable = position
+                                break 
+                            current = current.next
+                            position += 1 
+                        
+                        update_textarea(variable,1)
                         
                 elif msg.startswith("REMOVE_LINK:"):
-                    payload = msg[len("REMOVE_LINK:"):].strip()
+                    payload = msg[len("REMOVE_LINK:"):].strip().split(",")
+                    token, payload = payload
         
                     # Vérifier si le payload n'est pas vide
                     if payload:
-                        id = payload.strip()  # Assurez-vous de supprimer les espaces
-                        id=int(id)
-                        if id in message_list.acceldict:
-                                message_list.remove(id)
-                                update_textarea()
-                            
-                    else:
-                        print("Erreur : message après REMOVE_LINK: est vide")
+                        idd = payload.strip()  
+                        idd=int(idd)
+                        if idd in message_list.acceldict:
+                                                               
+                                current = message_list.head
+                                position = 0
+                                variable = 0
+                                #print(f"id recu :{idd}")
+                                while current is not None:
+                                    #print(f"id tester :{current.id}")
+                                    if int(current.id) == idd:
+                                        variable = position
+                                        break
+                                    current = current.next
+                                    position += 1
+                                
+                                message_list.remove(idd) 
+                                update_textarea(variable, 2)
                     
                 else:
                     log_output <= f"Message inconnu : {msg}\n"
@@ -302,7 +333,11 @@
         message_list = ChainedList()
         connect_to_server()
         
-        
+    
+
+
+
+
 
 
 
@@ -327,7 +362,8 @@
         #VAR#
         UserLec = #var#lec#var#
         UserEcr = #var#ecr#var#
-        key = '#var#key#var#''
+        AUTHOR = '#var#author#var#'
+        KEY = '#var#key#var#'
         tokendemes2 = "#var#token#var#"
 
         allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" "àâäéèêëîïôöùûüç" "{}[]&$/\=+_-'\".,;!?@#^%*() ")
@@ -542,7 +578,6 @@
                     # Ajouter l'entrée à la liste chaînée
                     message_list.add(author="", plain=last_key, cipher="", date="", lec=get_choice2(), ecr=get_choice1(), iv="", id=message_list.size+1, prev=message_list.acceldict[id], boolean=False)
                     # Afficher la dernière touche et la position du curseur dans la console
-                    print(f"Dernière touche pressée: {last_key}")
                     print(f"Liste actuelle: {message_list}")
                     # Afficher la position dans l'élément output
                     document["output"].text = f"Dernière touche pressée: {last_key}"
@@ -558,7 +593,7 @@
             document["cursorPosition"].text = f"Caractères avant le curseur: {cursor_pos}"
         
         
-        update_textarea()
+        update_textarea(0,0)
         document["editor"].bind("click", get_cursor_position)
         document["editor"].bind("keyup", get_cursor_position)
         document["userEcr"].text = f"Ecriture : {str(UserEcr)}"

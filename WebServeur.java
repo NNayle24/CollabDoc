@@ -2,9 +2,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsServer;
-import java.util.Map;
-import java.util.HashMap;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -13,6 +10,8 @@ import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.util.HashMap;
+import java.util.Map;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
@@ -33,7 +32,7 @@ public class WebServeur implements Runnable {
     public void run() {
         try {
             // Créer un serveur HTTPS
-            HttpsServer server = HttpsServer.create(new InetSocketAddress(port), 0);
+            HttpsServer server = HttpsServer.create(new InetSocketAddress(ip,port), 0);
             // Créer un contexte SSL
             SSLContext sslContext = SSLContext.getInstance("TLS");
 
@@ -100,11 +99,10 @@ public class WebServeur implements Runnable {
                 if (userInfo != "") {
                     Map<String, String> placeholders = new HashMap<>();
                     String [] info = userInfo.split(",");
-                    if (info.length == 4) {
+                    if (info.length == 3) {
                         placeholders.put("lec", info[0]);
                         placeholders.put("ecr", info[1]);
-                        placeholders.put("author", info[2]);
-                        info = info[3].split(":");
+                        info = info[2].split(":");
                         placeholders.put("key", info[0]);  
                         placeholders.put("token", info[1]);
                     }

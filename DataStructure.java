@@ -5,7 +5,9 @@ public interface DataStructure {
     Item[] getItems(String[] ids);
     Item[] getItems(String first);
     String IdGenerator();
-    String[] getAdded();
+    Item[] getAdded();
     String[] getRemoved();
-    
+    int getN();
+    void LoadFileContent(String filename);
+    void SaveFileContent(String filename);
 }
